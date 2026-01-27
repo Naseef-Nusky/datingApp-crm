@@ -42,15 +42,12 @@ const AdminLayout = ({ children }) => {
       >
         <div className="p-4 flex items-center justify-between border-b border-gray-700">
           {sidebarOpen && (
-            <div className="flex items-center space-x-2">
-              <img 
-                src="/logo-removebg.png" 
-                alt="Logo" 
-                className="h-10 w-auto object-contain"
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-              <h1 className="text-xl font-bold text-white">Admin CRM</h1>
-            </div>
+            <img 
+              src="/logo-removebg.png" 
+              alt="Logo" 
+              className="h-10 w-auto object-contain"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
           )}
           {!sidebarOpen && (
             <img 
