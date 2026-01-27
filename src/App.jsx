@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import AdminUsers from './pages/AdminUsers';
+import WishlistCategories from './pages/WishlistCategories';
+import WishlistProducts from './pages/WishlistProducts';
 import Settings from './pages/Settings';
 
 const ProtectedRoute = ({ children }) => {
@@ -36,6 +38,8 @@ function App() {
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/users" element={<Users />} />
                     <Route path="/admin-users" element={<AdminUsers />} />
+                    <Route path="/wishlist-categories" element={<WishlistCategories />} />
+                    <Route path="/wishlist-products" element={<WishlistProducts />} />
                     <Route path="/settings" element={<Settings />} />
                   </Routes>
                 </AdminLayout>
