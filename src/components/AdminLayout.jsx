@@ -11,6 +11,7 @@ import {
   FaTags,
   FaGift,
   FaHeart,
+  FaGem,
   FaChevronDown,
   FaChevronRight,
 } from 'react-icons/fa';
@@ -35,6 +36,7 @@ const AdminLayout = ({ children }) => {
     { path: '/', icon: FaHome, label: 'Dashboard', permission: () => true },
     { path: '/users', icon: FaUsers, label: 'Users', permission: canViewUsers },
     { path: '/admin-users', icon: FaUserShield, label: 'System Users', permission: () => true },
+    { path: '/virtual-gifts', icon: FaGem, label: 'Virtual Gifts', permission: () => true },
   ];
 
   // Wishlist sub-items (Categories, Products)

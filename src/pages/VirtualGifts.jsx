@@ -2,77 +2,59 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaPlus, FaEdit, FaTrash, FaImage } from 'react-icons/fa';
 
-const WishlistProducts = () => {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+const VirtualGifts = () => {
+  const [gifts, setGifts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [categoryFilter, setCategoryFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    categoryId: '',
-    sortOrder: 0,
+    creditCost: 0,
+    markAsFree: false,
+    isActive: true,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchCategories = async () => {
-    try {
-      const { data } = await axios.get('/api/admin/wishlist-categories');
-      setCategories(data.categories || []);
-      if (!categoryFilter && (data.categories?.length > 0)) {
-        setCategoryFilter(''); // load all products initially
-      }
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
-  };
-
-  const fetchProducts = async () => {
+  const fetchGifts = async () => {
     try {
       setLoading(true);
-      const params = categoryFilter ? { categoryId: categoryFilter } : {};
-      const { data } = await axios.get('/api/admin/wishlist-products', { params });
-      setProducts(data.products || []);
+      const { data } = await axios.get('/api/admin/gift-catalog');
+      setGifts(data.gifts || []);
     } catch (err) {
-      console.error('Error fetching products:', err);
-      setError(err.response?.data?.message || 'Failed to load products');
+      console.error('Error fetching gift catalog:', err);
+      setError(err.response?.data?.message || 'Failed to load virtual gifts');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCategories();
+    fetchGifts();
   }, []);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [categoryFilter]);
 
   const openCreate = () => {
     setEditingId(null);
     setFormData({
       name: '',
-      description: '',
-      categoryId: categories[0]?.id || '',
-      sortOrder: products.length,
+      creditCost: 0,
+      markAsFree: false,
+      isActive: true,
     });
     setImageFile(null);
     setError('');
     setShowModal(true);
   };
 
-  const openEdit = (p) => {
-    setEditingId(p.id);
+  const openEdit = (g) => {
+    setEditingId(g.id);
+    const cost = g.creditCost ?? 0;
     setFormData({
-      name: p.name,
-      description: p.description || '',
-      categoryId: p.categoryId || p.category?.id,
-      sortOrder: p.sortOrder ?? 0,
+      name: g.name,
+      creditCost: cost,
+      markAsFree: cost === 0,
+      isActive: g.isActive !== false,
     });
     setImageFile(null);
     setError('');
@@ -89,29 +71,26 @@ const WishlistProducts = () => {
     setSubmitting(true);
     setError('');
     try {
+      const creditCost = formData.markAsFree ? 0 : (parseInt(formData.creditCost, 10) || 0);
+      const fd = new FormData();
+      fd.append('name', formData.name.trim());
+      fd.append('description', '');
+      fd.append('category', 'other');
+      fd.append('type', 'virtual');
+      fd.append('creditCost', String(creditCost));
+      fd.append('isActive', formData.isActive ? 'true' : 'false');
+      if (imageFile) fd.append('image', imageFile);
       if (editingId) {
-        const fd = new FormData();
-        fd.append('name', formData.name);
-        fd.append('description', formData.description);
-        fd.append('categoryId', formData.categoryId);
-        fd.append('sortOrder', String(formData.sortOrder));
-        if (imageFile) fd.append('image', imageFile);
-        await axios.put(`/api/admin/wishlist-products/${editingId}`, fd, {
+        await axios.put(`/api/admin/gift-catalog/${editingId}`, fd, {
           headers: getAuthHeaders(),
         });
       } else {
-        const fd = new FormData();
-        fd.append('name', formData.name);
-        fd.append('description', formData.description);
-        fd.append('categoryId', formData.categoryId);
-        fd.append('sortOrder', String(formData.sortOrder));
-        if (imageFile) fd.append('image', imageFile);
-        await axios.post('/api/admin/wishlist-products', fd, {
+        await axios.post('/api/admin/gift-catalog', fd, {
           headers: getAuthHeaders(),
         });
       }
       setShowModal(false);
-      fetchProducts();
+      fetchGifts();
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -124,19 +103,19 @@ const WishlistProducts = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
+    if (!window.confirm('Delete this gift from the catalog?')) return;
     try {
-      await axios.delete(`/api/admin/wishlist-products/${id}`);
-      fetchProducts();
+      await axios.delete(`/api/admin/gift-catalog/${id}`, { headers: getAuthHeaders() });
+      fetchGifts();
     } catch (err) {
       setError(err.response?.data?.message || 'Delete failed');
     }
   };
 
-  if (loading && products.length === 0) {
+  if (loading && gifts.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading products...</div>
+        <div className="text-gray-500">Loading virtual gifts...</div>
       </div>
     );
   }
@@ -145,46 +124,35 @@ const WishlistProducts = () => {
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Wishlist Products</h2>
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange"
-            >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-nex text-white rounded-lg hover:opacity-90 transition shadow"
-            >
-              <FaPlus /> Add Product
-            </button>
-          </div>
+          <h2 className="text-xl font-semibold text-gray-800">Virtual Gifts Catalog</h2>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-nex text-white rounded-lg hover:opacity-90 transition shadow"
+          >
+            <FaPlus /> Add Gift
+          </button>
         </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Gifts shown here appear in chat and email. Set credit cost or mark as free.
+        </p>
         {error && <div className="mb-3 p-2 bg-red-50 text-red-700 rounded text-sm">{error}</div>}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {products.length === 0 ? (
+          {gifts.length === 0 ? (
             <div className="col-span-full py-8 text-center text-gray-500 text-sm">
-              No products in this category. Add categories first, then add products with name and image.
+              No virtual gifts yet. Add gift images, set credit values, and mark gifts as free if needed.
             </div>
           ) : (
-            products.map((p) => (
+            gifts.map((g) => (
               <div
-                key={p.id}
+                key={g.id}
                 className="border border-gray-200 rounded-md overflow-hidden hover:shadow-md transition"
               >
                 <div className="aspect-square bg-gray-100 relative overflow-hidden flex items-center justify-center">
-                  {p.imageUrl ? (
+                  {g.imageUrl ? (
                     <img
-                      src={p.imageUrl}
-                      alt={p.name}
+                      src={g.imageUrl}
+                      alt={g.name}
                       className="w-full h-full object-contain z-10"
                       onError={(e) => e.target.classList.add('opacity-0')}
                     />
@@ -193,18 +161,26 @@ const WishlistProducts = () => {
                       <FaImage className="w-10 h-10" />
                     </span>
                   )}
+                  {(g.creditCost ?? 0) === 0 && (
+                    <span className="absolute top-1 right-1 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded font-medium">
+                      FREE
+                    </span>
+                  )}
                 </div>
                 <div className="p-2">
-                  <p className="font-medium text-gray-800 truncate text-sm" title={p.name}>
-                    {p.name}
+                  <p className="font-medium text-gray-800 truncate text-sm" title={g.name}>
+                    {g.name}
                   </p>
-                  {p.category && (
-                    <p className="text-xs text-gray-500 capitalize truncate">{p.category.name}</p>
+                  <p className="text-xs text-gray-600">
+                    {(g.creditCost ?? 0) === 0 ? 'Free' : `${g.creditCost} Credits`}
+                  </p>
+                  {!g.isActive && (
+                    <p className="text-xs text-amber-600 font-medium">Inactive</p>
                   )}
                   <div className="flex justify-end gap-1 mt-1">
                     <button
                       type="button"
-                      onClick={() => openEdit(p)}
+                      onClick={() => openEdit(g)}
                       className="p-1.5 text-nex-orange hover:bg-orange-50 rounded text-sm"
                       title="Edit"
                     >
@@ -212,7 +188,7 @@ const WishlistProducts = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(p.id)}
+                      onClick={() => handleDelete(g.id)}
                       className="p-1.5 text-red-600 hover:bg-red-50 rounded text-sm"
                       title="Delete"
                     >
@@ -230,45 +206,56 @@ const WishlistProducts = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              {editingId ? 'Edit Product' : 'Add Product'}
+              {editingId ? 'Edit Gift' : 'Add Gift'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange focus:border-transparent"
-                  required
-                >
-                  <option value="">Select category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Capsule Coffee Machine"
+                  placeholder="e.g. Golden Crown"
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange focus:border-transparent"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange focus:border-transparent"
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="markAsFree"
+                  checked={formData.markAsFree}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      markAsFree: e.target.checked,
+                      creditCost: e.target.checked ? 0 : formData.creditCost,
+                    })
+                  }
+                  className="rounded border-gray-300 text-nex-orange focus:ring-nex-orange"
                 />
+                <label htmlFor="markAsFree" className="text-sm font-medium text-gray-700">
+                  Mark as free
+                </label>
               </div>
+              {!formData.markAsFree && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Credits</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formData.creditCost || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        creditCost: parseInt(e.target.value, 10) || 0,
+                      })
+                    }
+                    placeholder="e.g. 39"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange focus:border-transparent"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Image {editingId ? '(leave empty to keep current)' : ''}
@@ -280,17 +267,17 @@ const WishlistProducts = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sort order</label>
+              <div className="flex items-center gap-2">
                 <input
-                  type="number"
-                  min={0}
-                  value={formData.sortOrder}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sortOrder: parseInt(e.target.value, 10) || 0 })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange focus:border-transparent"
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="rounded border-gray-300 text-nex-orange focus:ring-nex-orange"
                 />
+                <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+                  Active (visible in chat/email)
+                </label>
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex justify-end gap-2 pt-2">
@@ -317,4 +304,4 @@ const WishlistProducts = () => {
   );
 };
 
-export default WishlistProducts;
+export default VirtualGifts;

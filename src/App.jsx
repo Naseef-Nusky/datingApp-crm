@@ -7,6 +7,7 @@ import Users from './pages/Users';
 import AdminUsers from './pages/AdminUsers';
 import WishlistCategories from './pages/WishlistCategories';
 import WishlistProducts from './pages/WishlistProducts';
+import VirtualGifts from './pages/VirtualGifts';
 import Settings from './pages/Settings';
 
 const ProtectedRoute = ({ children }) => {
@@ -40,6 +41,7 @@ function App() {
                     <Route path="/admin-users" element={<AdminUsers />} />
                     <Route path="/wishlist-categories" element={<WishlistCategories />} />
                     <Route path="/wishlist-products" element={<WishlistProducts />} />
+                    <Route path="/virtual-gifts" element={<VirtualGifts />} />
                     <Route path="/settings" element={<Settings />} />
                   </Routes>
                 </AdminLayout>
