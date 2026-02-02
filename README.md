@@ -96,6 +96,7 @@ admin_CRM/
 
 ## Notes
 
+- **Default branch:** `master` (clone with `git clone -b master https://github.com/Naseef-Nusky/datingApp-crm.git`)
 - The admin panel uses the same backend API as the main app
 - All admin routes should be protected with the `admin` middleware
 - The panel is designed to run on port 5174 to avoid conflicts with the main frontend (port 5173)

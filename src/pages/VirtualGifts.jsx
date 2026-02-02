@@ -137,7 +137,7 @@ const VirtualGifts = () => {
           Gifts shown here appear in chat and email. Set credit cost or mark as free.
         </p>
         {error && <div className="mb-3 p-2 bg-red-50 text-red-700 rounded text-sm">{error}</div>}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2">
           {gifts.length === 0 ? (
             <div className="col-span-full py-8 text-center text-gray-500 text-sm">
               No virtual gifts yet. Add gift images, set credit values, and mark gifts as free if needed.
@@ -146,7 +146,7 @@ const VirtualGifts = () => {
             gifts.map((g) => (
               <div
                 key={g.id}
-                className="border border-gray-200 rounded-md overflow-hidden hover:shadow-md transition"
+                className="border border-gray-200 rounded-md overflow-hidden hover:shadow-md transition max-w-[140px]"
               >
                 <div className="aspect-square bg-gray-100 relative overflow-hidden flex items-center justify-center">
                   {g.imageUrl ? (
@@ -158,30 +158,30 @@ const VirtualGifts = () => {
                     />
                   ) : (
                     <span className="text-gray-400 z-0">
-                      <FaImage className="w-10 h-10" />
+                      <FaImage className="w-8 h-8" />
                     </span>
                   )}
                   {(g.creditCost ?? 0) === 0 && (
-                    <span className="absolute top-1 right-1 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded font-medium">
+                    <span className="absolute top-1 right-1 z-20 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded font-medium shadow">
                       FREE
                     </span>
                   )}
                 </div>
-                <div className="p-2">
-                  <p className="font-medium text-gray-800 truncate text-sm" title={g.name}>
+                <div className="p-1.5">
+                  <p className="font-medium text-gray-800 truncate text-xs" title={g.name}>
                     {g.name}
                   </p>
-                  <p className="text-xs text-gray-600">
-                    {(g.creditCost ?? 0) === 0 ? 'Free' : `${g.creditCost} Credits`}
+                  <p className="text-[10px] text-gray-600">
+                    {(g.creditCost ?? 0) === 0 ? 'Free' : `${g.creditCost} Cr`}
                   </p>
                   {!g.isActive && (
-                    <p className="text-xs text-amber-600 font-medium">Inactive</p>
+                    <p className="text-[10px] text-amber-600 font-medium">Inactive</p>
                   )}
-                  <div className="flex justify-end gap-1 mt-1">
+                  <div className="flex justify-end gap-0.5 mt-0.5">
                     <button
                       type="button"
                       onClick={() => openEdit(g)}
-                      className="p-1.5 text-nex-orange hover:bg-orange-50 rounded text-sm"
+                      className="p-1 text-nex-orange hover:bg-orange-50 rounded text-xs"
                       title="Edit"
                     >
                       <FaEdit />
@@ -189,7 +189,7 @@ const VirtualGifts = () => {
                     <button
                       type="button"
                       onClick={() => handleDelete(g.id)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded text-sm"
+                      className="p-1 text-red-600 hover:bg-red-50 rounded text-xs"
                       title="Delete"
                     >
                       <FaTrash />
