@@ -42,7 +42,6 @@ const Login = () => {
             className="h-20 mx-auto mb-4 object-contain"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
-          <h1 className="text-3xl font-bold bg-gradient-nex bg-clip-text text-transparent mb-2">Admin CRM</h1>
           <p className="text-gray-600">Vantage Dating Administration Panel</p>
         </div>
 
