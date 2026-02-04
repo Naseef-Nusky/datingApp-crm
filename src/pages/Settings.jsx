@@ -3,7 +3,7 @@ import { FaSave, FaCog, FaShieldAlt, FaBell } from 'react-icons/fa';
 
 const Settings = () => {
   const [settings, setSettings] = useState({
-    siteName: 'Nexdating',
+    siteName: 'Vantage Dating',
     maintenanceMode: false,
     allowRegistrations: true,
     requireEmailVerification: true,

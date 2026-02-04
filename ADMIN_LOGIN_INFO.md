@@ -4,7 +4,7 @@
 
 After running the admin creation script, use these default credentials:
 
-**Email:** `admin@nexdating.com`  
+**Email:** `admin@vantagedating.com`  
 **Password:** `Admin123!`
 
 ## How to Create Admin User
@@ -25,7 +25,7 @@ After running the admin creation script, use these default credentials:
    ```
 
 3. **The script will create an admin user with:**
-   - Email: `admin@nexdating.com` (or from ADMIN_EMAIL env variable)
+   - Email: `admin@vantagedating.com` (or from ADMIN_EMAIL env variable)
    - Password: `Admin123!` (or from ADMIN_PASSWORD env variable)
    - User Type: `superadmin` (default - highest level access)
    - Verified: `true`
@@ -55,7 +55,7 @@ Then run the script again.
 2. Open browser to: `http://localhost:5174`
 
 3. Enter the admin credentials:
-   - **Email:** `admin@nexdating.com`
+   - **Email:** `admin@vantagedating.com`
    - **Password:** `Admin123!`
 
 4. Click "Login"

@@ -63,7 +63,7 @@ const AdminLayout = ({ children }) => {
         <div className="p-4 flex items-center justify-between border-b border-gray-700">
           {sidebarOpen && (
             <img 
-              src="/logo-removebg.png" 
+              src="/logonew.png" 
               alt="Logo" 
               className="h-10 w-auto object-contain"
               onError={(e) => { e.target.style.display = 'none'; }}
@@ -71,7 +71,7 @@ const AdminLayout = ({ children }) => {
           )}
           {!sidebarOpen && (
             <img 
-              src="/logo-removebg.png" 
+              src="/logonew.png" 
               alt="Logo" 
               className="h-10 w-auto object-contain mx-auto"
               onError={(e) => { e.target.style.display = 'none'; }}

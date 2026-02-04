@@ -1,6 +1,6 @@
 # Admin CRM Panel
 
-A comprehensive admin panel for managing the Nexdating dating app, built with React and Tailwind CSS.
+A comprehensive admin panel for managing the Vantage Dating app, built with React and Tailwind CSS.
 
 ## Features
 

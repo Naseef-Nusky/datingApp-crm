@@ -27,7 +27,7 @@ const Login = () => {
   };
 
   const handleQuickLogin = () => {
-    setEmail('admin@nexdating.com');
+    setEmail('admin@vantagedating.com');
     setPassword('Admin123!');
     setError('');
   };
@@ -37,13 +37,13 @@ const Login = () => {
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
           <img 
-            src="/logo-removebg.png" 
-            alt="Nexdating Logo" 
+            src="/logonew.png" 
+            alt="Vantage Dating Logo" 
             className="h-20 mx-auto mb-4 object-contain"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
           <h1 className="text-3xl font-bold bg-gradient-nex bg-clip-text text-transparent mb-2">Admin CRM</h1>
-          <p className="text-gray-600">Nexdating Administration Panel</p>
+          <p className="text-gray-600">Vantage Dating Administration Panel</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -66,7 +66,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange focus:border-transparent"
-                placeholder="admin@nexdating.com"
+                placeholder="admin@vantagedating.com"
                 required
               />
             </div>
@@ -115,7 +115,7 @@ const Login = () => {
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <p className="text-xs font-semibold text-gray-700 mb-2">Default Super Admin:</p>
             <p className="text-xs text-gray-600">
-              <span className="font-medium">Email:</span> admin@nexdating.com
+              <span className="font-medium">Email:</span> admin@vantagedating.com
             </p>
             <p className="text-xs text-gray-600">
               <span className="font-medium">Password:</span> Admin123!
