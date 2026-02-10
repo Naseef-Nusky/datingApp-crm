@@ -339,14 +339,21 @@ const PresentOrders = () => {
                       <span className="text-gray-800">{detailsPerson.userData.profile.gender}</span>
                     </div>
                   )}
-                  {detailsPerson.userData.profile.location && typeof detailsPerson.userData.profile.location === 'object' && Object.keys(detailsPerson.userData.profile.location).length > 0 && (
-                    <div>
-                      <span className="text-gray-500 block">Location</span>
-                      <pre className="text-gray-800 text-xs bg-gray-50 p-2 rounded overflow-x-auto">
-                        {JSON.stringify(detailsPerson.userData.profile.location, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                  {detailsPerson.userData.profile.location &&
+                    typeof detailsPerson.userData.profile.location === 'object' &&
+                    Object.keys(detailsPerson.userData.profile.location).length > 0 && (
+                      <div>
+                        <span className="text-gray-500 block">Location</span>
+                        <span className="text-gray-800">
+                          {[
+                            detailsPerson.userData.profile.location.city,
+                            detailsPerson.userData.profile.location.country,
+                          ]
+                            .filter(Boolean)
+                            .join(', ') || '—'}
+                        </span>
+                      </div>
+                    )}
                 </>
               )}
               <div>
