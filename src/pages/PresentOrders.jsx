@@ -6,7 +6,6 @@ const statusOptions = [
   { value: 'all', label: 'All statuses' },
   { value: 'pending', label: 'Pending' },
   { value: 'processing', label: 'Processing' },
-  { value: 'shipped', label: 'Shipped' },
   { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
@@ -19,6 +18,25 @@ const PresentOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
   const [detailsPerson, setDetailsPerson] = useState(null);
+
+  const getStatusBadgeClasses = (status) => {
+    switch (status) {
+      case 'processing':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'delivered':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'pending':
+      default:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    const found = statusOptions.find((opt) => opt.value === status);
+    return found ? found.label : 'Pending';
+  };
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('adminToken');
@@ -246,20 +264,29 @@ const PresentOrders = () => {
                         {order.creditsUsed ?? 0}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-700">
-                        <select
-                          value={order.deliveryStatus || 'pending'}
-                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                          disabled={updatingId === order.id}
-                          className="px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-nex-orange"
-                        >
-                          {statusOptions
-                            .filter((opt) => opt.value !== 'all')
-                            .map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                        </select>
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold ${getStatusBadgeClasses(
+                              order.deliveryStatus || 'pending'
+                            )}`}
+                          >
+                            {getStatusLabel(order.deliveryStatus || 'pending')}
+                          </span>
+                          <select
+                            value={order.deliveryStatus || 'pending'}
+                            onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                            disabled={updatingId === order.id}
+                            className="px-2 py-1 border border-gray-300 rounded-md text-[11px] focus:outline-none focus:ring-1 focus:ring-nex-orange bg-white"
+                          >
+                            {statusOptions
+                              .filter((opt) => opt.value !== 'all')
+                              .map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
                       </td>
                     </tr>
                   );
