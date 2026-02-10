@@ -21,7 +21,9 @@ const VirtualGifts = () => {
     try {
       setLoading(true);
       const { data } = await axios.get('/api/admin/gift-catalog');
-      setGifts(data.gifts || []);
+      const all = data.gifts || [];
+      // Show only non-physical items here (virtual / both)
+      setGifts(all.filter((g) => g.type !== 'physical'));
     } catch (err) {
       console.error('Error fetching gift catalog:', err);
       setError(err.response?.data?.message || 'Failed to load virtual gifts');
@@ -134,7 +136,8 @@ const VirtualGifts = () => {
           </button>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          Gifts shown here appear in chat and email. Set credit cost or mark as free.
+          Virtual gifts shown here appear in chat and email. Set credit cost or mark as free.
+          Physical presents for real-world delivery are managed separately in the <strong>Presents</strong> section.
         </p>
         {error && <div className="mb-3 p-2 bg-red-50 text-red-700 rounded text-sm">{error}</div>}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2">

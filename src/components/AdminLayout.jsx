@@ -14,12 +14,14 @@ import {
   FaGem,
   FaChevronDown,
   FaChevronRight,
+  FaTruck,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [wishlistOpen, setWishlistOpen] = useState(true);
+  const [presentsOpen, setPresentsOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const { admin, logout, canViewUsers } = useAuth();
@@ -29,7 +31,12 @@ const AdminLayout = ({ children }) => {
     navigate('/login');
   };
 
-  const isWishlistActive = location.pathname === '/wishlist-categories' || location.pathname === '/wishlist-products';
+  const isWishlistActive =
+    location.pathname === '/wishlist-categories' || location.pathname === '/wishlist-products';
+  const isPresentsActive =
+    location.pathname === '/present-categories' ||
+    location.pathname === '/presents' ||
+    location.pathname === '/present-orders';
 
   // Top-level menu items
   const topMenuItems = [
@@ -45,11 +52,18 @@ const AdminLayout = ({ children }) => {
     { path: '/wishlist-products', icon: FaGift, label: 'Products' },
   ];
 
+  // Presents sub-items (Categories, Catalog, Orders)
+  const presentsItems = [
+    { path: '/present-categories', icon: FaTags, label: 'Present Categories' },
+    { path: '/presents', icon: FaGift, label: 'Presents Catalog' },
+    { path: '/present-orders', icon: FaTruck, label: 'Present Orders' },
+  ];
+
   const bottomMenuItems = [
     { path: '/settings', icon: FaCog, label: 'Settings', permission: () => true },
   ];
 
-  const allPathsForHeader = [...topMenuItems, ...wishlistItems, ...bottomMenuItems];
+  const allPathsForHeader = [...topMenuItems, ...wishlistItems, ...presentsItems, ...bottomMenuItems];
   const currentHeaderLabel = allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
 
   return (
@@ -155,6 +169,77 @@ const AdminLayout = ({ children }) => {
                   </button>
                   <ul className="absolute left-full top-0 ml-1 hidden group-hover:block bg-gray-800 rounded-lg shadow-lg py-2 min-w-[160px] z-50">
                     {wishlistItems.map((item) => {
+                      const SubIcon = item.icon;
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <li key={item.path}>
+                          <Link
+                            to={item.path}
+                            className={`flex items-center space-x-2 py-2 px-4 hover:bg-gray-700 ${
+                              isActive ? 'text-nex-orange' : 'text-gray-300'
+                            }`}
+                          >
+                            <SubIcon className="text-sm" />
+                            <span>{item.label}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </li>
+
+            {/* Presents section with Catalog & Orders underneath */}
+            <li>
+              {sidebarOpen ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setPresentsOpen(!presentsOpen)}
+                    className={`w-full flex items-center justify-between space-x-3 p-3 rounded-lg transition-colors ${
+                      isPresentsActive ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700'
+                    }`}
+                  >
+                    <span className="flex items-center space-x-3">
+                      <FaGift className="text-xl flex-shrink-0" />
+                      <span>Presents</span>
+                    </span>
+                    {presentsOpen ? <FaChevronDown className="text-sm" /> : <FaChevronRight className="text-sm" />}
+                  </button>
+                  {presentsOpen && (
+                    <ul className="mt-1 ml-4 pl-2 border-l border-gray-600 space-y-1">
+                      {presentsItems.map((item) => {
+                        const SubIcon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        return (
+                          <li key={item.path}>
+                            <Link
+                              to={item.path}
+                              className={`flex items-center space-x-3 py-2 px-3 rounded-lg transition-colors text-sm ${
+                                isActive ? 'bg-gradient-nex text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
+                              }`}
+                            >
+                              <SubIcon className="text-lg flex-shrink-0" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </>
+              ) : (
+                <div className="relative group">
+                  <button
+                    type="button"
+                    className="flex items-center justify-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 w-full"
+                    title="Presents"
+                  >
+                    <FaGift className="text-xl" />
+                  </button>
+                  <ul className="absolute left-full top-0 ml-1 hidden group-hover:block bg-gray-800 rounded-lg shadow-lg py-2 min-w-[180px] z-50">
+                    {presentsItems.map((item) => {
                       const SubIcon = item.icon;
                       const isActive = location.pathname === item.path;
                       return (
