@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaImage } from 'react-icons/fa';
 
 const PresentCategories = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', slug: '', sortOrder: 0 });
+  const [formData, setFormData] = useState({ name: '', slug: '', sortOrder: 0, imageUrl: '' });
+  const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,7 +39,8 @@ const PresentCategories = () => {
 
   const openCreate = () => {
     setEditingId(null);
-    setFormData({ name: '', slug: '', sortOrder: 0 });
+    setFormData({ name: '', slug: '', sortOrder: 0, imageUrl: '' });
+    setImageFile(null);
     setError('');
     setShowModal(true);
   };
@@ -49,7 +51,9 @@ const PresentCategories = () => {
       name: cat.name || '',
       slug: cat.slug || '',
       sortOrder: cat.sortOrder ?? 0,
+      imageUrl: cat.imageUrl || '',
     });
+    setImageFile(null);
     setError('');
     setShowModal(true);
   };
@@ -59,17 +63,18 @@ const PresentCategories = () => {
     setSubmitting(true);
     setError('');
     try {
-      const payload = {
-        name: formData.name.trim(),
-        slug: formData.slug.trim(),
-        sortOrder: formData.sortOrder ?? 0,
-      };
+      const fd = new FormData();
+      fd.append('name', formData.name.trim());
+      fd.append('slug', formData.slug.trim());
+      fd.append('sortOrder', String(formData.sortOrder ?? 0));
+      if (imageFile) fd.append('image', imageFile);
       if (editingId) {
-        await axios.put(`/api/admin/present-categories/${editingId}`, payload, {
+        if (formData.imageUrl && !imageFile) fd.append('imageUrl', formData.imageUrl);
+        await axios.put(`/api/admin/present-categories/${editingId}`, fd, {
           headers: getAuthHeaders(),
         });
       } else {
-        await axios.post('/api/admin/present-categories', payload, {
+        await axios.post('/api/admin/present-categories', fd, {
           headers: getAuthHeaders(),
         });
       }
@@ -124,6 +129,7 @@ const PresentCategories = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Slug</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
@@ -133,13 +139,24 @@ const PresentCategories = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {categories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                     No present categories yet. Add some to organize the Present Shop (e.g. Flowers, Gadgets, Pets).
                   </td>
                 </tr>
               ) : (
                 categories.map((cat) => (
                   <tr key={cat.id}>
+                    <td className="px-4 py-3">
+                      {cat.imageUrl ? (
+                        <img
+                          src={cat.imageUrl}
+                          alt={cat.name}
+                          className="w-10 h-10 rounded object-cover border border-gray-200"
+                        />
+                      ) : (
+                        <span className="text-gray-400"><FaImage className="w-8 h-8" /></span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-medium text-gray-800">{cat.name}</td>
                     <td className="px-4 py-3 text-gray-600">{cat.slug}</td>
                     <td className="px-4 py-3 text-gray-600">{cat.sortOrder}</td>
@@ -219,6 +236,26 @@ const PresentCategories = () => {
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange focus:border-transparent"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Image {editingId ? '(leave empty to keep current)' : ''}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-nex-orange"
+                />
+                {(formData.imageUrl || imageFile) && (
+                  <div className="mt-2">
+                    <img
+                      src={imageFile ? URL.createObjectURL(imageFile) : formData.imageUrl}
+                      alt="Preview"
+                      className="w-20 h-20 rounded object-cover border border-gray-200"
+                    />
+                  </div>
+                )}
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex justify-end gap-2 pt-2">
