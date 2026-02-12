@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { FaSave, FaCog, FaShieldAlt, FaBell } from 'react-icons/fa';
 
 const Settings = () => {
@@ -9,20 +10,70 @@ const Settings = () => {
     requireEmailVerification: true,
     maxUploadSize: 10,
     enableNotifications: true,
+    // Credit-related settings (managed via backend)
+    chatMessage: 0,
+    voiceCallPerMinute: 0,
+    videoCallPerMinute: 0,
   });
   const [saving, setSaving] = useState(false);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('adminToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   const handleChange = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
+  // Load credit settings from backend on mount
+  useEffect(() => {
+    const loadCreditSettings = async () => {
+      try {
+        const { data } = await axios.get('/api/admin/credit-settings', {
+          headers: getAuthHeaders(),
+        });
+        if (data?.settings) {
+          setSettings((prev) => ({
+            ...prev,
+            ...data.settings,
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading credit settings:', error);
+      }
+    };
+    loadCreditSettings();
+  }, []);
+
   const handleSave = async () => {
     setSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      // Persist credit-related settings to backend
+      await axios.put(
+        '/api/admin/credit-settings',
+        {
+          chatMessage: settings.chatMessage,
+          voiceCallPerMinute: settings.voiceCallPerMinute,
+          videoCallPerMinute: settings.videoCallPerMinute,
+        },
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+
+      // Other UI-only settings remain local for now
       alert('Settings saved successfully!');
-    }, 1000);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      const msg =
+        error.response?.data?.message ||
+        (Array.isArray(error.response?.data?.errors) && error.response.data.errors[0]?.msg) ||
+        'Failed to save settings';
+      alert(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -59,6 +110,60 @@ const Settings = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
                 />
               </div>
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center space-x-2 mb-4">
+              <FaCog className="text-admin-primary" />
+              <h3 className="text-lg font-semibold text-gray-800">Credit Costs (CRM)</h3>
+            </div>
+            <div className="space-y-4 pl-8">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Chat Message Cost (credits per message)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={settings.chatMessage}
+                  onChange={(e) => handleChange('chatMessage', parseInt(e.target.value || '0', 10))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Voice Call Cost (credits per started minute)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={settings.voiceCallPerMinute}
+                    onChange={(e) =>
+                      handleChange('voiceCallPerMinute', parseInt(e.target.value || '0', 10))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Video Call Cost (credits per started minute)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={settings.videoCallPerMinute}
+                    onChange={(e) =>
+                      handleChange('videoCallPerMinute', parseInt(e.target.value || '0', 10))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">
+                These values control how many credits are deducted for each chat message and for each started minute of voice or video calls.
+              </p>
             </div>
           </section>
 
