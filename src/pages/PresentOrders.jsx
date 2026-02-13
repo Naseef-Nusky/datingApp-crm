@@ -358,7 +358,18 @@ const PresentOrders = () => {
               )}
               <div>
                 <span className="text-gray-500 block">Email</span>
-                <span className="text-gray-800">{detailsPerson.userData?.email || '—'}</span>
+                {detailsPerson.userData?.email ? (
+                  <a
+                    href={`mailto:${detailsPerson.userData.email}`}
+                    className="text-nex-orange hover:underline break-all"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {detailsPerson.userData.email}
+                  </a>
+                ) : (
+                  <span className="text-gray-800">—</span>
+                )}
               </div>
               <div>
                 <span className="text-gray-500 block">User ID</span>
