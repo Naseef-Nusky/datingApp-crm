@@ -30,7 +30,7 @@ const AdminUsers = () => {
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
     firstName: '',
     lastName: '',
@@ -61,10 +61,16 @@ const AdminUsers = () => {
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/api/admin/admins', formData);
+      await axios.post('/api/admin/admins', {
+        email: formData.username.trim(),
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: formData.role,
+      });
       setShowCreateModal(false);
       setFormData({
-        email: '',
+        username: '',
         password: '',
         firstName: '',
         lastName: '',
@@ -88,11 +94,14 @@ const AdminUsers = () => {
       }
       
       // If editing superadmin, keep the role as superadmin
-      const updateData = selectedAdmin?.userType === 'superadmin' 
-        ? { ...formData, role: 'superadmin' }
-        : formData;
-      
-      await axios.put(`/api/admin/admins/${selectedAdmin.id}`, updateData);
+      const payload = {
+        email: formData.username.trim(),
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: selectedAdmin?.userType === 'superadmin' ? 'superadmin' : formData.role,
+      };
+      if (formData.password) payload.password = formData.password;
+      await axios.put(`/api/admin/admins/${selectedAdmin.id}`, payload);
       setShowEditModal(false);
       setSelectedAdmin(null);
       fetchAdminUsers();
@@ -120,7 +129,7 @@ const AdminUsers = () => {
   const handleEditClick = (admin) => {
     setSelectedAdmin(admin);
     setFormData({
-      email: admin.email,
+      username: admin.email || '',
       password: '', // Don't pre-fill password
       firstName: admin.profile?.firstName || '',
       lastName: admin.profile?.lastName || '',
@@ -141,9 +150,9 @@ const AdminUsers = () => {
   const filteredAdmins = adminUsers.filter((admin) => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      admin.email?.toLowerCase().includes(searchLower) ||
-      admin.profile?.firstName?.toLowerCase().includes(searchLower) ||
-      admin.profile?.lastName?.toLowerCase().includes(searchLower)
+      (admin.email || '').toLowerCase().includes(searchLower) ||
+      (admin.profile?.firstName || '').toLowerCase().includes(searchLower) ||
+      (admin.profile?.lastName || '').toLowerCase().includes(searchLower)
     );
   });
 
@@ -216,7 +225,7 @@ const AdminUsers = () => {
                   Admin
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                  Username
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
@@ -255,7 +264,7 @@ const AdminUsers = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{admin.email}</div>
+                    <div className="text-sm text-gray-900">{admin.email || '—'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -331,15 +340,18 @@ const AdminUsers = () => {
             <form onSubmit={handleCreateAdmin} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
+                  Username *
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="e.g. admin@example.com"
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  autoComplete="username"
                 />
+                <p className="text-xs text-gray-500 mt-1">Use email format for login (e.g. admin@example.com)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -351,6 +363,7 @@ const AdminUsers = () => {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  autoComplete="new-password"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -406,7 +419,7 @@ const AdminUsers = () => {
                   onClick={() => {
                     setShowCreateModal(false);
                     setFormData({
-                      email: '',
+                      username: '',
                       password: '',
                       firstName: '',
                       lastName: '',
@@ -431,14 +444,16 @@ const AdminUsers = () => {
             <form onSubmit={handleEditAdmin} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
+                  Username *
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="e.g. admin@example.com"
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  autoComplete="username"
                 />
               </div>
               <div>
@@ -450,6 +465,7 @@ const AdminUsers = () => {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  autoComplete="new-password"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -494,7 +510,7 @@ const AdminUsers = () => {
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   {selectedAdmin?.userType === 'superadmin' 
-                    ? 'Note: Super Admin role cannot be changed. Only email, password, and name can be updated.'
+                    ? 'Note: Super Admin role cannot be changed. Only username, password, and name can be updated.'
                     : 'Note: Only Super Admin can edit system users. Super Admin role cannot be assigned through this interface.'}
                 </p>
               </div>

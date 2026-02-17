@@ -46,9 +46,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await axios.post('/api/auth/admin-login', { username, password });
       const allowedRoles = ['admin', 'superadmin', 'viewer'];
       if (response.data.user && allowedRoles.includes(response.data.user.userType)) {
         localStorage.setItem('adminToken', response.data.token);

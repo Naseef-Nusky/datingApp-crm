@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaLock, FaEnvelope, FaUserShield } from 'react-icons/fa';
+import { FaLock, FaUser, FaUserShield } from 'react-icons/fa';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ const Login = () => {
     setError('');
     setLoading(true);
 
-    const result = await login(email, password);
+    const result = await login(username, password);
     setLoading(false);
 
     if (result.success) {
@@ -27,7 +27,7 @@ const Login = () => {
   };
 
   const handleQuickLogin = () => {
-    setEmail('admin@vantagedating.com');
+    setUsername('admin@vantagedating.com');
     setPassword('Admin123!');
     setError('');
   };
@@ -54,19 +54,20 @@ const Login = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              Username
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FaEnvelope className="text-gray-400" />
+                <FaUser className="text-gray-400" />
               </div>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange focus:border-transparent"
-                placeholder="admin@vantagedating.com"
+                placeholder="Enter username"
                 required
+                autoComplete="username"
               />
             </div>
           </div>
@@ -86,6 +87,7 @@ const Login = () => {
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange focus:border-transparent"
                 placeholder="Enter your password"
                 required
+                autoComplete="current-password"
               />
             </div>
           </div>
@@ -114,7 +116,7 @@ const Login = () => {
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <p className="text-xs font-semibold text-gray-700 mb-2">Default Super Admin:</p>
             <p className="text-xs text-gray-600">
-              <span className="font-medium">Email:</span> admin@vantagedating.com
+              <span className="font-medium">Username:</span> admin@vantagedating.com
             </p>
             <p className="text-xs text-gray-600">
               <span className="font-medium">Password:</span> Admin123!
