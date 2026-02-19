@@ -14,6 +14,8 @@ const Settings = () => {
     chatMessage: 0,
     voiceCallPerMinute: 0,
     videoCallPerMinute: 0,
+    photoViewCredits: 15,
+    voiceMessageCredits: 10,
   });
   const [saving, setSaving] = useState(false);
 
@@ -56,6 +58,8 @@ const Settings = () => {
           chatMessage: settings.chatMessage,
           voiceCallPerMinute: settings.voiceCallPerMinute,
           videoCallPerMinute: settings.videoCallPerMinute,
+          photoViewCredits: settings.photoViewCredits,
+          voiceMessageCredits: settings.voiceMessageCredits,
         },
         {
           headers: getAuthHeaders(),
@@ -161,8 +165,38 @@ const Settings = () => {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    View photo in email (credits per photo)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={settings.photoViewCredits}
+                    onChange={(e) =>
+                      handleChange('photoViewCredits', parseInt(e.target.value || '0', 10))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Listen to voice message in email (credits per voice)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={settings.voiceMessageCredits}
+                    onChange={(e) =>
+                      handleChange('voiceMessageCredits', parseInt(e.target.value || '0', 10))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  />
+                </div>
+              </div>
               <p className="text-xs text-gray-500">
-                These values control how many credits are deducted for each chat message and for each started minute of voice or video calls.
+                Chat/voice/video: credits per message or per started minute. Photo/voice: credits deducted when a user unlocks an email attachment to view a photo or listen to a voice message.
               </p>
             </div>
           </section>
