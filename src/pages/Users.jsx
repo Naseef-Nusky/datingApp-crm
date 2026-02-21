@@ -9,6 +9,7 @@ import {
   FaTimesCircle,
   FaLock,
   FaPlus,
+  FaCrown,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
@@ -30,7 +31,7 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all'); // all, active, inactive, verified, unverified
+  const [filter, setFilter] = useState('all'); // all, active, inactive, verified, unverified, neverSpent, noSpend7d, noSpend30d
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -221,6 +222,9 @@ const Users = () => {
               <option value="inactive">Inactive</option>
               <option value="verified">Verified</option>
               <option value="unverified">Unverified</option>
+              <option value="neverSpent">Without spent (never)</option>
+              <option value="noSpend7d">No spend (last 7 days)</option>
+              <option value="noSpend30d">No spend (last 30 days)</option>
             </select>
           </div>
         </div>
@@ -248,6 +252,15 @@ const Users = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  VIP
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Spent
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Active
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -299,6 +312,26 @@ const Users = () => {
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                       {user.userType || 'regular'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {user.vipActive ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800" title={user.vipExpiresAt ? `Expires ${new Date(user.vipExpiresAt).toLocaleDateString()}` : 'VIP'}>
+                        <FaCrown className="w-3.5 h-3.5" />
+                        VIP
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {user.totalCreditsSpent ?? 0} cr
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {user.lastCreditSpentAt
+                      ? new Date(user.lastCreditSpentAt).toLocaleDateString()
+                      : user.lastLogin
+                        ? new Date(user.lastLogin).toLocaleDateString()
+                        : '—'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {user.isActive ? (

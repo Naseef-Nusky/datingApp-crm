@@ -17,6 +17,7 @@ const Settings = () => {
     photoViewCredits: 15,
     videoViewCredits: 15,
     voiceMessageCredits: 10,
+    vipCreditsRequired: 160,
   });
   const [saving, setSaving] = useState(false);
 
@@ -62,6 +63,7 @@ const Settings = () => {
           photoViewCredits: settings.photoViewCredits,
           videoViewCredits: settings.videoViewCredits,
           voiceMessageCredits: settings.voiceMessageCredits,
+          vipCreditsRequired: settings.vipCreditsRequired,
         },
         {
           headers: getAuthHeaders(),
@@ -210,6 +212,23 @@ const Settings = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  VIP credits required (per 30 days)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={settings.vipCreditsRequired}
+                  onChange={(e) =>
+                    handleChange('vipCreditsRequired', Math.max(1, parseInt(e.target.value || '160', 10)))
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary max-w-xs"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Credits a Premium user must spend in the last 30 days to qualify for or renew VIP. Applies to new VIP and existing VIP members.
+                </p>
               </div>
               <p className="text-xs text-gray-500">
                 Chat/voice/video: credits per message or per started minute. Photo/video/voice: credits deducted when a user unlocks an email attachment to view a photo, view a video, or listen to a voice message.
