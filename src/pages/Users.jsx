@@ -149,14 +149,15 @@ const Users = ({ defaultTypeFilter }) => {
     }
   };
 
-  const handleDeletePhoto = async (userId) => {
-    if (!window.confirm('Delete this profile photo?')) return;
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Permanently delete this user and their profile? This cannot be undone.')) return;
     try {
-      await axios.delete(`/api/admin/profiles/${userId}/photo`);
+      await axios.delete(`/api/admin/users/${userId}`);
       fetchUsers();
+      alert('User permanently deleted.');
     } catch (error) {
-      console.error('Error deleting photo:', error);
-      alert(error.response?.data?.message || 'Failed to delete photo');
+      console.error('Error deleting user:', error);
+      alert(error.response?.data?.message || 'Failed to delete user');
     }
   };
 
@@ -479,10 +480,9 @@ const Users = ({ defaultTypeFilter }) => {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDeletePhoto(user.id)}
-                          disabled={!user.profile?.photos?.length}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                          title="Remove profile photo"
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50"
+                          title="Permanently delete user"
                         >
                           <FaTrash className="flex-shrink-0" />
                           <span>Remove</span>

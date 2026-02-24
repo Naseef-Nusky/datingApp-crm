@@ -261,7 +261,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         // Interests are optional
         return true;
       case 5:
-        return crmCreateUser ? true : !!formData.photo;
+        return !!formData.photo;
       default:
         return true;
     }
@@ -780,7 +780,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                     <img
                       src="/profile.png"
                       alt="Profile placeholder"
-                      className="w-32 h-32 object-cover rounded-full mb-4"
+                      className={`${crmCreateUser ? 'w-20 h-20' : 'w-32 h-32'} object-cover rounded-full mb-4`}
                     />
                     <input
                       type="file"
@@ -882,15 +882,15 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                 type="button"
                 onClick={handleNext}
                 className={`min-h-[48px] min-w-[120px] px-6 py-3 sm:px-12 rounded-lg font-semibold text-white transition bg-gradient-nex hover:opacity-90 active:opacity-95 shadow-md cursor-pointer touch-manipulation select-none ${
-                  loading || checkingEmail || (!crmCreateUser && currentStep === 5 && !formData.photo) ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+                  loading || checkingEmail || (currentStep === 5 && !formData.photo) ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
                 }`}
-                disabled={loading || checkingEmail || (!crmCreateUser && currentStep === 5 && !formData.photo)}
+                disabled={loading || checkingEmail || (currentStep === 5 && !formData.photo)}
               >
                 {loading
                   ? (completeProfileOnly ? 'Saving...' : 'Registering...')
                   : checkingEmail
                     ? 'Checking...'
-                    : 'NEXT'}
+                    : (currentStep === 5 ? 'REGISTER' : 'NEXT')}
               </button>
 
               <div className="flex space-x-2 mt-4">
