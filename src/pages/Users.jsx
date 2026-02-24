@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   FaSearch,
@@ -10,10 +11,14 @@ import {
   FaLock,
   FaPlus,
   FaCrown,
+  FaTrash,
+  FaCircle,
+  FaEdit,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
-const Users = () => {
+const Users = ({ defaultTypeFilter }) => {
+  const navigate = useNavigate();
   const { canViewUsers, canEditUsers, canCreateUsers, isAdmin, admin } = useAuth();
   
   // Debug logging
@@ -32,7 +37,20 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // all, active, inactive, verified, unverified, neverSpent, noSpend7d, noSpend30d
+  const [typeFilter, setTypeFilter] = useState(defaultTypeFilter || 'all'); // all, real, streamers
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editUser, setEditUser] = useState(null);
+  const [editProfileForm, setEditProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    age: '',
+    gender: 'male',
+    bio: '',
+    locationCity: '',
+    locationCountry: '',
+  });
+  const [savingEditProfile, setSavingEditProfile] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -77,12 +95,18 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [filter]);
+  }, [filter, typeFilter]);
+
+  useEffect(() => {
+    if (defaultTypeFilter && defaultTypeFilter !== typeFilter) setTypeFilter(defaultTypeFilter);
+  }, [defaultTypeFilter]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/admin/users?filter=${filter}`);
+      const params = new URLSearchParams({ filter });
+      if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter);
+      const response = await axios.get(`/api/admin/users?${params.toString()}`);
       setUsers(response.data.users || []);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -103,6 +127,16 @@ const Users = () => {
     }
   };
 
+  const handleSetOnline = async (userId, isOnline) => {
+    try {
+      await axios.put(`/api/admin/profiles/${userId}/online`, { isOnline });
+      fetchUsers();
+    } catch (error) {
+      console.error('Error setting online status:', error);
+      alert(error.response?.data?.message || 'Failed to update online status');
+    }
+  };
+
   const handleToggleVerified = async (userId, currentStatus) => {
     try {
       await axios.put(`/api/admin/users/${userId}/toggle-verified`, {
@@ -112,6 +146,59 @@ const Users = () => {
     } catch (error) {
       console.error('Error toggling verification:', error);
       alert('Failed to update verification status');
+    }
+  };
+
+  const handleDeletePhoto = async (userId) => {
+    if (!window.confirm('Delete this profile photo?')) return;
+    try {
+      await axios.delete(`/api/admin/profiles/${userId}/photo`);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      alert(error.response?.data?.message || 'Failed to delete photo');
+    }
+  };
+
+  const handleOpenEditProfile = (user) => {
+    if (user.userType !== 'streamer' && user.userType !== 'talent') return;
+    setEditUser(user);
+    setEditProfileForm({
+      firstName: user.profile?.firstName || '',
+      lastName: user.profile?.lastName || '',
+      age: user.profile?.age ?? '',
+      gender: user.profile?.gender || 'male',
+      bio: user.profile?.bio || '',
+      locationCity: user.profile?.location?.city || '',
+      locationCountry: user.profile?.location?.country || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditProfile = async (e) => {
+    e.preventDefault();
+    if (!editUser?.id) return;
+    setSavingEditProfile(true);
+    try {
+      await axios.put(`/api/admin/profiles/${editUser.id}`, {
+        firstName: editProfileForm.firstName.trim(),
+        lastName: editProfileForm.lastName.trim(),
+        age: parseInt(editProfileForm.age, 10) || 18,
+        gender: editProfileForm.gender,
+        bio: editProfileForm.bio.trim(),
+        location: {
+          city: editProfileForm.locationCity.trim(),
+          country: editProfileForm.locationCountry.trim(),
+        },
+      });
+      setShowEditModal(false);
+      setEditUser(null);
+      fetchUsers();
+      alert('Profile updated.');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSavingEditProfile(false);
     }
   };
 
@@ -183,52 +270,60 @@ const Users = () => {
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">User Management</h2>
-          <div className="flex gap-2 items-center">
-            <button
-              onClick={() => {
-                const canCreate = canCreateUsers && typeof canCreateUsers === 'function' && canCreateUsers();
-                console.log('Create User button clicked - canCreate:', canCreate);
-                console.log('Admin userType:', admin?.userType);
-                if (canCreate) {
-                  setShowCreateModal(true);
-                } else {
-                  alert(`You do not have permission to create users. Current role: ${admin?.userType || 'unknown'}. Only Super Admin and Viewer roles can create users.`);
+          {!defaultTypeFilter && (
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => {
+                  const canCreate = canCreateUsers && typeof canCreateUsers === 'function' && canCreateUsers();
+                  if (canCreate) {
+                    navigate('/users/create');
+                  } else {
+                    alert(`You do not have permission to create users. Current role: ${admin?.userType || 'unknown'}. Only Super Admin and Viewer roles can create users.`);
+                  }
+                }}
+                disabled={!canCreateUsers || typeof canCreateUsers !== 'function' || !canCreateUsers()}
+                className={`px-4 py-2 rounded-md transition-all flex items-center space-x-2 ${
+                  canCreateUsers && typeof canCreateUsers === 'function' && canCreateUsers()
+                    ? 'bg-gradient-nex text-white hover:opacity-90 cursor-pointer'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+                }`}
+                title={
+                  canCreateUsers && typeof canCreateUsers === 'function' && canCreateUsers()
+                    ? 'Create new user'
+                    : admin?.userType === 'admin'
+                    ? 'Admin role cannot create users'
+                    : `You do not have permission to create users. Current role: ${admin?.userType || 'unknown'}`
                 }
-              }}
-              disabled={!canCreateUsers || typeof canCreateUsers !== 'function' || !canCreateUsers()}
-              className={`px-4 py-2 rounded-md transition-all flex items-center space-x-2 ${
-                canCreateUsers && typeof canCreateUsers === 'function' && canCreateUsers()
-                  ? 'bg-gradient-nex text-white hover:opacity-90 cursor-pointer'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
-              }`}
-              title={
-                canCreateUsers && typeof canCreateUsers === 'function' && canCreateUsers()
-                  ? 'Create new user'
-                  : admin?.userType === 'admin'
-                  ? 'Admin role cannot create users'
-                  : `You do not have permission to create users. Current role: ${admin?.userType || 'unknown'}`
-              }
-            >
-              <FaPlus className="mr-1" />
-              <span>Create User</span>
-            </button>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange"
-            >
-              <option value="all">All Users</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="verified">Verified</option>
-              <option value="unverified">Unverified</option>
-              <option value="neverSpent">Without spent (never)</option>
-              <option value="noSpend7d">No spend (last 7 days)</option>
-              <option value="noSpend30d">No spend (last 30 days)</option>
-            </select>
-          </div>
+              >
+                <FaPlus className="mr-1" />
+                <span>Create User</span>
+              </button>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange"
+              >
+                <option value="all">All (users + streamers)</option>
+                <option value="real">Real users</option>
+                <option value="streamers">Streamers</option>
+              </select>
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange"
+              >
+                <option value="all">All Users</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="verified">Verified</option>
+                <option value="unverified">Unverified</option>
+                <option value="neverSpent">Without spent (never)</option>
+                <option value="noSpend7d">No spend (last 7 days)</option>
+                <option value="noSpend30d">No spend (last 30 days)</option>
+              </select>
+            </div>
+          )}
         </div>
-
         <div className="relative mb-6">
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -258,6 +353,9 @@ const Users = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total Spent
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Online
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Active
@@ -310,7 +408,7 @@ const Users = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {user.userType || 'regular'}
+                      {user.userType === 'regular' || !user.userType ? 'Real user' : user.userType === 'talent' || user.userType === 'streamer' ? 'Streamer' : user.userType}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -325,6 +423,22 @@ const Users = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.totalCreditsSpent ?? 0} cr
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      {user.profile?.isOnline ? (
+                        <>
+                          <FaCircle className="text-green-500 text-xs" title="Online" />
+                          <span className="text-green-700 text-xs">Online</span>
+                        </>
+                      ) : (
+                        <span className="text-gray-500 text-xs">
+                          {user.profile?.lastSeen
+                            ? `Offline (${new Date(user.profile.lastSeen).toLocaleString()})`
+                            : 'Offline'}
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {user.lastCreditSpentAt
@@ -351,30 +465,55 @@ const Users = () => {
                       <FaTimesCircle className="text-red-500" />
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                  <td className="px-6 py-4 text-sm font-medium">
                     {canEditUsers() ? (
-                      <>
+                      <div className="flex flex-wrap gap-2">
+                        {(user.userType === 'streamer' || user.userType === 'talent') && (
+                          <button
+                            onClick={() => handleOpenEditProfile(user)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50"
+                            title="Edit profile data"
+                          >
+                            <FaEdit className="flex-shrink-0" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeletePhoto(user.id)}
+                          disabled={!user.profile?.photos?.length}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Remove profile photo"
+                        >
+                          <FaTrash className="flex-shrink-0" />
+                          <span>Remove</span>
+                        </button>
+                        <button
+                          onClick={() => handleSetOnline(user.id, !user.profile?.isOnline)}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.profile?.isOnline ? 'text-green-600 hover:text-green-900 hover:bg-green-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+                          title={user.profile?.isOnline ? 'Set offline' : 'Set online'}
+                        >
+                          <FaCircle className="flex-shrink-0 text-xs" />
+                          <span>{user.profile?.isOnline ? 'Offline' : 'Online'}</span>
+                        </button>
                         <button
                           onClick={() => handleToggleActive(user.id, user.isActive)}
-                          className={`${
-                            user.isActive
-                              ? 'text-red-600 hover:text-red-900'
-                              : 'text-green-600 hover:text-green-900'
-                          }`}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.isActive ? 'text-red-600 hover:text-red-900 hover:bg-red-50' : 'text-green-600 hover:text-green-900 hover:bg-green-50'}`}
                           title={user.isActive ? 'Deactivate' : 'Activate'}
                         >
-                          {user.isActive ? <FaUserTimes /> : <FaUserCheck />}
+                          {user.isActive ? <FaUserTimes className="flex-shrink-0" /> : <FaUserCheck className="flex-shrink-0" />}
+                          <span>{user.isActive ? 'Deactivate' : 'Activate'}</span>
                         </button>
                         <button
                           onClick={() => handleToggleVerified(user.id, user.isVerified)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-blue-600 hover:text-blue-900 hover:bg-blue-50"
                           title={user.isVerified ? 'Unverify' : 'Verify'}
                         >
-                          <FaCheckCircle />
+                          <FaCheckCircle className="flex-shrink-0" />
+                          <span>{user.isVerified ? 'Unverify' : 'Verify'}</span>
                         </button>
-                      </>
+                      </div>
                     ) : (
-                      <span className="text-gray-400 text-xs">View Only</span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </td>
                 </tr>
@@ -503,6 +642,110 @@ const Users = () => {
                     });
                   }}
                   className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit streamer profile modal */}
+      {showEditModal && editUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Edit profile — {editUser.email}</h3>
+            <form onSubmit={handleSaveEditProfile} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editProfileForm.firstName}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, firstName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last name</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.lastName}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, lastName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                  <input
+                    type="number"
+                    min="18"
+                    value={editProfileForm.age}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, age: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                  <select
+                    value={editProfileForm.gender}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, gender: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                <textarea
+                  rows={3}
+                  value={editProfileForm.bio}
+                  onChange={(e) => setEditProfileForm({ ...editProfileForm, bio: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Short bio"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.locationCity}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, locationCity: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Display location"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.locationCountry}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, locationCountry: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Display location"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={savingEditProfile}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {savingEditProfile ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowEditModal(false); setEditUser(null); }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
                 >
                   Cancel
                 </button>

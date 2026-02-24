@@ -15,11 +15,15 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaTruck,
+  FaVideo,
+  FaPlus,
+  FaComments,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [usersOpen, setUsersOpen] = useState(true);
   const [wishlistOpen, setWishlistOpen] = useState(true);
   const [presentsOpen, setPresentsOpen] = useState(true);
   const location = useLocation();
@@ -31,19 +35,28 @@ const AdminLayout = ({ children }) => {
     navigate('/login');
   };
 
+  const isUsersActive =
+    location.pathname === '/users' ||
+    location.pathname === '/streamers' ||
+    location.pathname === '/users/create';
   const isWishlistActive =
     location.pathname === '/wishlist-categories' || location.pathname === '/wishlist-products';
   const isPresentsActive =
     location.pathname === '/present-categories' ||
     location.pathname === '/presents' ||
     location.pathname === '/present-orders';
+  const isConversationsActive = location.pathname.startsWith('/conversations');
 
-  // Top-level menu items
+  // Top-level menu items (Dashboard only at top; Users is a dropdown below)
   const topMenuItems = [
     { path: '/', icon: FaHome, label: 'Dashboard', permission: () => true },
-    { path: '/users', icon: FaUsers, label: 'Users', permission: canViewUsers },
-    { path: '/admin-users', icon: FaUserShield, label: 'System Users', permission: () => true },
-    { path: '/virtual-gifts', icon: FaGem, label: 'Virtual Gifts', permission: () => true },
+  ];
+
+  // Users sub-items (Real users, Streamers, Create user)
+  const usersItems = [
+    { path: '/users', icon: FaUsers, label: 'Real users' },
+    { path: '/streamers', icon: FaVideo, label: 'Streamers' },
+    { path: '/users/create', icon: FaPlus, label: 'Create user' },
   ];
 
   // Wishlist sub-items (Categories, Products)
@@ -63,8 +76,10 @@ const AdminLayout = ({ children }) => {
     { path: '/settings', icon: FaCog, label: 'Settings', permission: () => true },
   ];
 
-  const allPathsForHeader = [...topMenuItems, ...wishlistItems, ...presentsItems, ...bottomMenuItems];
-  const currentHeaderLabel = allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
+  const conversationItem = { path: '/conversations', icon: FaComments, label: 'Conversations', permission: () => true };
+  const allPathsForHeader = [...topMenuItems, ...usersItems, ...wishlistItems, ...presentsItems, conversationItem, ...bottomMenuItems];
+  const headerPath = location.pathname.match(/^\/conversations\/[^/]+$/) ? { path: '/conversations', label: 'View conversation' } : null;
+  const currentHeaderLabel = headerPath?.label || allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
 
   return (
     <div className="flex h-screen bg-admin-light">
@@ -118,6 +133,118 @@ const AdminLayout = ({ children }) => {
                 </li>
               );
             })}
+
+            {/* Users section with Real users, Streamers, Create user underneath */}
+            {canViewUsers && canViewUsers() && (
+              <li>
+                {sidebarOpen ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setUsersOpen(!usersOpen)}
+                      className={`w-full flex items-center justify-between space-x-3 p-3 rounded-lg transition-colors ${
+                        isUsersActive ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      <span className="flex items-center space-x-3">
+                        <FaUsers className="text-xl flex-shrink-0" />
+                        <span>Users</span>
+                      </span>
+                      {usersOpen ? <FaChevronDown className="text-sm" /> : <FaChevronRight className="text-sm" />}
+                    </button>
+                    {usersOpen && (
+                      <ul className="mt-1 ml-4 pl-2 border-l border-gray-600 space-y-1">
+                        {usersItems.map((item) => {
+                          const SubIcon = item.icon;
+                          const isActive = location.pathname === item.path;
+                          return (
+                            <li key={item.path}>
+                              <Link
+                                to={item.path}
+                                className={`flex items-center space-x-3 py-2 px-3 rounded-lg transition-colors text-sm ${
+                                  isActive ? 'bg-gradient-nex text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
+                                }`}
+                              >
+                                <SubIcon className="text-lg flex-shrink-0" />
+                                <span>{item.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </>
+                ) : (
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      className="flex items-center justify-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 w-full"
+                      title="Users"
+                    >
+                      <FaUsers className="text-xl" />
+                    </button>
+                    <ul className="absolute left-full top-0 ml-1 hidden group-hover:block bg-gray-800 rounded-lg shadow-lg py-2 min-w-[160px] z-50">
+                      {usersItems.map((item) => {
+                        const SubIcon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        return (
+                          <li key={item.path}>
+                            <Link
+                              to={item.path}
+                              className={`flex items-center space-x-2 py-2 px-4 hover:bg-gray-700 ${
+                                isActive ? 'text-nex-orange' : 'text-gray-300'
+                              }`}
+                            >
+                              <SubIcon className="text-sm" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            )}
+
+            {/* System Users - single link */}
+            <li>
+              <Link
+                to="/admin-users"
+                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  location.pathname === '/admin-users' ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                <FaUserShield className="text-xl flex-shrink-0" />
+                {sidebarOpen && <span>System Users</span>}
+              </Link>
+            </li>
+
+            {/* Conversations - single link */}
+            <li>
+              <Link
+                to="/conversations"
+                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  isConversationsActive ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                <FaComments className="text-xl flex-shrink-0" />
+                {sidebarOpen && <span>Conversations</span>}
+              </Link>
+            </li>
+
+            {/* Virtual Gifts - single link */}
+            <li>
+              <Link
+                to="/virtual-gifts"
+                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  location.pathname === '/virtual-gifts' ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                <FaGem className="text-xl flex-shrink-0" />
+                {sidebarOpen && <span>Virtual Gifts</span>}
+              </Link>
+            </li>
 
             {/* Wishlist section with Categories & Products underneath */}
             <li>

@@ -4,6 +4,7 @@ import AdminLayout from './components/AdminLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import RegistrationWizard from '../components/RegistrationWizard';
 import AdminUsers from './pages/AdminUsers';
 import WishlistCategories from './pages/WishlistCategories';
 import WishlistProducts from './pages/WishlistProducts';
@@ -12,6 +13,8 @@ import Presents from './pages/Presents';
 import PresentOrders from './pages/PresentOrders';
 import PresentCategories from './pages/PresentCategories';
 import Settings from './pages/Settings';
+import Conversations from './pages/Conversations';
+import ConversationThread from './pages/ConversationThread';
 
 const ProtectedRoute = ({ children }) => {
   const { admin, loading } = useAuth();
@@ -40,7 +43,9 @@ function App() {
                 <AdminLayout>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
-                    <Route path="/users" element={<Users />} />
+                    <Route path="/users" element={<Users defaultTypeFilter="real" />} />
+                    <Route path="/streamers" element={<Users defaultTypeFilter="streamers" />} />
+                    <Route path="/users/create" element={<RegistrationWizard crmCreateUser onSuccessRedirectTo="/users" />} />
                     <Route path="/admin-users" element={<AdminUsers />} />
                     <Route path="/wishlist-categories" element={<WishlistCategories />} />
                     <Route path="/wishlist-products" element={<WishlistProducts />} />
@@ -48,6 +53,8 @@ function App() {
                     <Route path="/present-categories" element={<PresentCategories />} />
                     <Route path="/presents" element={<Presents />} />
                     <Route path="/present-orders" element={<PresentOrders />} />
+                    <Route path="/conversations" element={<Conversations />} />
+                    <Route path="/conversations/:chatId" element={<ConversationThread />} />
                     <Route path="/settings" element={<Settings />} />
                   </Routes>
                 </AdminLayout>
