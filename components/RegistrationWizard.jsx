@@ -315,6 +315,11 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           lastName: (formData.lastName || '').trim(),
           age,
           gender: formData.gender || 'other',
+          seeking: formData.seeking || 'both',
+          hometown: formData.hometown || '',
+          bio: formData.bio || '',
+          idealPartner: formData.idealPartner || '',
+          interests: Array.isArray(formData.interests) ? formData.interests : [],
         };
         if (password) payload.password = password;
         const role = formData.userRole || 'user';
