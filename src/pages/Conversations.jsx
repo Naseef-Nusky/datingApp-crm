@@ -106,7 +106,6 @@ export default function Conversations() {
                 <tr>
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">Participants</th>
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">Types</th>
-                  <th className="text-left py-3 px-4 text-gray-600 font-medium">Last message</th>
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">Date</th>
                   <th className="text-right py-3 px-4 text-gray-600 font-medium">Action</th>
                 </tr>
@@ -149,9 +148,6 @@ export default function Conversations() {
                         {typeLabel(c.user2)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-gray-600 text-sm max-w-xs truncate">
-                      {c.lastMessage || '—'}
-                    </td>
                     <td className="py-3 px-4 text-gray-500 text-sm">
                       {c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString() : '—'}
                     </td>
@@ -160,7 +156,7 @@ export default function Conversations() {
                         to={`/conversations/${c.id}`}
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-admin-primary text-white hover:opacity-90 text-sm"
                       >
-                        <FaEye /> View
+                        <FaEye /> View chats
                       </Link>
                     </td>
                   </tr>

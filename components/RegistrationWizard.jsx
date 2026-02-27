@@ -514,7 +514,6 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                   >
                     <option value="user">Real users</option>
                     <option value="streamer">Streamer</option>
-                    <option value="admin">Admin</option>
                   </select>
                 </div>
                 <div>
@@ -568,7 +567,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-gray-700 mb-2">I am a:</label>
-                <div className="flex space-x-6">
+                <div className="flex space-x-8 sm:space-x-10">
                   <button
                     type="button"
                     onClick={() => handleChange('gender', 'male')}
@@ -614,7 +613,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
 
               <div>
                 <label className="block text-gray-700 mb-2">Seeking a:</label>
-                <div className="flex space-x-6">
+                <div className="flex space-x-8 sm:space-x-10">
                   <button
                     type="button"
                     onClick={() => handleChange('seeking', 'male')}
