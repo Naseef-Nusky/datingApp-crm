@@ -1,6 +1,38 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { FaSave, FaCog, FaShieldAlt, FaBell } from 'react-icons/fa';
+import { FaSave, FaCog, FaShieldAlt, FaBell, FaTags } from 'react-icons/fa';
+
+const DEFAULT_PACKS = [
+  { plan: 'basic', creditsLabel: '150 Credits/Mo', wasPrice: '69', price: '19.99', save: 'SAVE 66%' },
+  { plan: 'premium', creditsLabel: '600 Credits/Mo', wasPrice: '179', price: '149', save: 'SAVE 16%' },
+  { plan: 'vip', creditsLabel: '1500 Credits/Mo', wasPrice: '369', price: '299', save: 'SAVE 16%' },
+];
+
+const DEFAULT_REFILL_PACKS = [
+  { id: 'p20', credits: 20, price: 16, saveLabel: 'SAVE 20%', badge: 'BESTSELLER', imageUrl: '' },
+  { id: 'p50', credits: 50, price: 39, saveLabel: 'SAVE 17%', badge: '', imageUrl: '' },
+  { id: 'p160', credits: 160, price: 99, saveLabel: 'SAVE 16%', badge: '', imageUrl: '' },
+  { id: 'p1000', credits: 1000, price: 480, saveLabel: 'SAVE 16%', badge: 'BEST VALUE', imageUrl: '' },
+];
+
+function getSavePercent(wasPrice, price) {
+  const was = parseFloat(String(wasPrice).replace(/[^0-9.]/g, '')) || 0;
+  const p = parseFloat(String(price).replace(/[^0-9.]/g, '')) || 0;
+  if (was <= 0 || p >= was) return 0;
+  return Math.round(((was - p) / was) * 100);
+}
+
+function creditsDisplayValue(creditsLabel) {
+  const str = String(creditsLabel ?? '').trim();
+  const num = str.replace(/^(\d+).*$/, '$1');
+  return num || '';
+}
+
+function creditsLabelForSave(value) {
+  const str = String(value ?? '').trim();
+  if (/^\d+$/.test(str)) return `${str} Credits/Mo`;
+  return str || '';
+}
 
 const Settings = () => {
   const [settings, setSettings] = useState({
@@ -18,6 +50,13 @@ const Settings = () => {
     videoViewCredits: 15,
     voiceMessageCredits: 10,
     vipCreditsRequired: 160,
+    // Subscription modal (Upgrade modal)
+    subscriptionModalTitle: 'Subscribe to a Monthly Credit Pack & Date FREELY!',
+    subscriptionStep1Title: '1. Choose Monthly Credit Pack Size:',
+    subscriptionStep2Title: '2. Get Bonuses:',
+    subscriptionPacks: DEFAULT_PACKS,
+    // Refill popup packs
+    refillPacks: DEFAULT_REFILL_PACKS,
   });
   const [saving, setSaving] = useState(false);
 
@@ -28,6 +67,82 @@ const Settings = () => {
 
   const handleChange = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handlePackChange = (packIndex, field, value) => {
+    setSettings((prev) => {
+      const packs = [...(prev.subscriptionPacks || DEFAULT_PACKS)];
+      if (!packs[packIndex]) packs[packIndex] = { plan: ['basic', 'premium', 'vip'][packIndex], creditsLabel: '', wasPrice: '', price: '', save: '' };
+      packs[packIndex] = { ...packs[packIndex], [field]: value };
+      return { ...prev, subscriptionPacks: packs };
+    });
+  };
+
+  const handleRefillPackChange = (packIndex, field, value) => {
+    setSettings((prev) => {
+      const packs = [...(prev.refillPacks || DEFAULT_REFILL_PACKS)];
+      if (!packs[packIndex]) {
+        packs[packIndex] = {
+          id: `p${packIndex + 1}`,
+          credits: 0,
+          price: 0,
+          saveLabel: '',
+          badge: '',
+          imageUrl: '',
+        };
+      }
+      packs[packIndex] = { ...packs[packIndex], [field]: value };
+      return { ...prev, refillPacks: packs };
+    });
+  };
+
+  const handleRefillPackImageUpload = async (packIndex, file) => {
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const { data } = await axios.post('/api/admin/refill-pack-image', formData, {
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      if (data?.url) {
+        handleRefillPackChange(packIndex, 'imageUrl', data.url);
+      }
+    } catch (error) {
+      console.error('Error uploading refill pack image:', error);
+      const msg =
+        error.response?.data?.message ||
+        (Array.isArray(error.response?.data?.errors) && error.response.data.errors[0]?.msg) ||
+        'Failed to upload image';
+      alert(msg);
+    }
+  };
+
+  const addRefillPack = () => {
+    setSettings((prev) => {
+      const packs = [...(prev.refillPacks || DEFAULT_REFILL_PACKS)];
+      const nextIndex = packs.length;
+      const newPack = {
+        id: `p${nextIndex + 1}`,
+        credits: 0,
+        price: 0,
+        saveLabel: '',
+        badge: '',
+        imageUrl: '',
+      };
+      return { ...prev, refillPacks: [...packs, newPack] };
+    });
+  };
+
+  const removeRefillPack = (packIndex) => {
+    setSettings((prev) => {
+      const packs = [...(prev.refillPacks || DEFAULT_REFILL_PACKS)];
+      if (packs.length <= 1) return prev;
+      packs.splice(packIndex, 1);
+      return { ...prev, refillPacks: packs };
+    });
   };
 
   // Load credit settings from backend on mount
@@ -53,24 +168,29 @@ const Settings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Persist credit-related settings to backend
-      await axios.put(
-        '/api/admin/credit-settings',
-        {
-          chatMessage: settings.chatMessage,
-          voiceCallPerMinute: settings.voiceCallPerMinute,
-          videoCallPerMinute: settings.videoCallPerMinute,
-          photoViewCredits: settings.photoViewCredits,
-          videoViewCredits: settings.videoViewCredits,
-          voiceMessageCredits: settings.voiceMessageCredits,
-          vipCreditsRequired: settings.vipCreditsRequired,
-        },
-        {
-          headers: getAuthHeaders(),
-        }
-      );
+      const subscriptionPacks = (settings.subscriptionPacks || DEFAULT_PACKS).map((pack) => {
+        const savePercent = getSavePercent(pack.wasPrice, pack.price);
+        return {
+          ...pack,
+          creditsLabel: creditsLabelForSave(pack.creditsLabel),
+          save: `SAVE ${savePercent}%`,
+        };
+      });
+      const payload = {
+        chatMessage: settings.chatMessage,
+        voiceCallPerMinute: settings.voiceCallPerMinute,
+        videoCallPerMinute: settings.videoCallPerMinute,
+        photoViewCredits: settings.photoViewCredits,
+        videoViewCredits: settings.videoViewCredits,
+        voiceMessageCredits: settings.voiceMessageCredits,
+        vipCreditsRequired: settings.vipCreditsRequired,
+        subscriptionPacks,
+        refillPacks: settings.refillPacks || DEFAULT_REFILL_PACKS,
+      };
+      await axios.put('/api/admin/credit-settings', payload, {
+        headers: getAuthHeaders(),
+      });
 
-      // Other UI-only settings remain local for now
       alert('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -233,6 +353,168 @@ const Settings = () => {
               <p className="text-xs text-gray-500">
                 Chat/voice/video: credits per message or per started minute. Photo/video/voice: credits deducted when a user unlocks an email attachment to view a photo, view a video, or listen to a voice message.
               </p>
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center space-x-2 mb-4">
+              <FaTags className="text-admin-primary" />
+              <h3 className="text-lg font-semibold text-gray-800">Subscription Modal (Upgrade)</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-4 pl-8">
+              Edit credit pack labels and pricing shown in the upgrade modal. Changes appear on the main app after save.
+            </p>
+            <div className="space-y-4 pl-8">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Credit packs (Pack 1, 2, 3)</label>
+                {(settings.subscriptionPacks || DEFAULT_PACKS).map((pack, idx) => (
+                  <div key={idx} className="mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50 space-y-2">
+                    <span className="text-xs font-medium text-gray-500 uppercase">Pack {idx + 1}</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-xs font-medium text-gray-600">Credits</span>
+                        <input
+                          type="text"
+                          placeholder="e.g. 200"
+                          value={creditsDisplayValue(pack.creditsLabel)}
+                          onChange={(e) => handlePackChange(idx, 'creditsLabel', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        />
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-xs font-medium text-gray-600">Was price</span>
+                        <input
+                          type="text"
+                          placeholder="e.g. 69"
+                          value={pack.wasPrice ?? ''}
+                          onChange={(e) => handlePackChange(idx, 'wasPrice', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        />
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-xs font-medium text-gray-600">Price</span>
+                        <input
+                          type="text"
+                          placeholder="e.g. 19.99"
+                          value={pack.price ?? ''}
+                          onChange={(e) => handlePackChange(idx, 'price', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        />
+                      </div>
+                      <div className="px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-100 text-gray-700 font-medium flex items-center">
+                        SAVE {getSavePercent(pack.wasPrice, pack.price)}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center space-x-2 mb-4">
+              <FaTags className="text-admin-primary" />
+              <h3 className="text-lg font-semibold text-gray-800">Refill Popup Packs</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-4 pl-8">
+              Configure one-time credit refill packs (credits, price, label, and image) shown in the refill popup.
+            </p>
+            <div className="space-y-4 pl-8">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Refill packs (you can add more than 4)
+                </label>
+                <button
+                  type="button"
+                  onClick={addRefillPack}
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-md bg-admin-primary text-white hover:bg-admin-primary-dark"
+                >
+                  + Add pack
+                </button>
+              </div>
+              {(settings.refillPacks || DEFAULT_REFILL_PACKS).map((pack, idx) => (
+                <div key={pack.id || idx} className="mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-500 uppercase">Pack {idx + 1}</span>
+                    { (settings.refillPacks || DEFAULT_REFILL_PACKS).length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeRefillPack(idx)}
+                        className="text-xs text-red-500 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs font-medium text-gray-600">Credits</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={pack.credits ?? 0}
+                        onChange={(e) => handleRefillPackChange(idx, 'credits', parseInt(e.target.value || '0', 10))}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs font-medium text-gray-600">Price (USD)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={pack.price ?? 0}
+                        onChange={(e) => handleRefillPackChange(idx, 'price', parseFloat(e.target.value || '0'))}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs font-medium text-gray-600">Save label</span>
+                      <input
+                        type="text"
+                        placeholder="e.g. SAVE 20%"
+                        value={pack.saveLabel ?? ''}
+                        onChange={(e) => handleRefillPackChange(idx, 'saveLabel', e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs font-medium text-gray-600">Badge</span>
+                      <select
+                        value={pack.badge || ''}
+                        onChange={(e) => handleRefillPackChange(idx, 'badge', e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+                      >
+                        <option value="">None</option>
+                        <option value="BESTSELLER">BESTSELLER</option>
+                        <option value="BEST VALUE">BEST VALUE</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-xs font-medium text-gray-600">Image</span>
+                      {pack.imageUrl && (
+                        <img
+                          src={pack.imageUrl}
+                          alt={`Pack ${idx + 1}`}
+                          className="h-12 w-12 object-contain mb-1 border border-gray-200 rounded"
+                        />
+                      )}
+                      <label className="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 bg-white cursor-pointer hover:bg-gray-50 w-fit">
+                        Upload
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleRefillPackImageUpload(idx, file);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 

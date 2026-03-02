@@ -1,5 +1,27 @@
 # Admin Login Credentials
 
+## Quick: Create CRM super admin
+
+1. In **backend/.env** set (or leave defaults):
+   ```env
+   ADMIN_EMAIL=admin@vantagedating.com
+   ADMIN_PASSWORD=YourSecurePassword123!
+   ```
+2. From the project root run:
+   ```bash
+   cd backend
+   npm run create-admin
+   ```
+3. Use that **email** and **password** to log in to the CRM (e.g. http://localhost:5174).
+
+To **promote an existing user** to super admin (same email as `ADMIN_EMAIL`):
+   ```bash
+   cd backend
+   npm run update-superadmin
+   ```
+
+---
+
 ## Default Admin Credentials
 
 After running the admin creation script, use these default credentials:
