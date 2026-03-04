@@ -15,6 +15,7 @@ import PresentCategories from './pages/PresentCategories';
 import Settings from './pages/Settings';
 import Conversations from './pages/Conversations';
 import ConversationThread from './pages/ConversationThread';
+import Payments from './pages/Payments';
 
 const ProtectedRoute = ({ children }) => {
   const { admin, loading } = useAuth();
@@ -55,6 +56,7 @@ function App() {
                     <Route path="/present-orders" element={<PresentOrders />} />
                     <Route path="/conversations" element={<Conversations />} />
                     <Route path="/conversations/:chatId" element={<ConversationThread />} />
+                    <Route path="/payments" element={<Payments />} />
                     <Route path="/settings" element={<Settings />} />
                   </Routes>
                 </AdminLayout>

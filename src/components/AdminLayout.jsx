@@ -18,6 +18,7 @@ import {
   FaVideo,
   FaPlus,
   FaComments,
+  FaCreditCard,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
@@ -73,11 +74,13 @@ const AdminLayout = ({ children }) => {
   ];
 
   const bottomMenuItems = [
+    { path: '/payments', icon: FaCreditCard, label: 'Subscription & Refill Payments', permission: () => true },
     { path: '/settings', icon: FaCog, label: 'Settings', permission: () => true },
   ];
 
   const conversationItem = { path: '/conversations', icon: FaComments, label: 'Conversations', permission: () => true };
-  const allPathsForHeader = [...topMenuItems, ...usersItems, ...wishlistItems, ...presentsItems, conversationItem, ...bottomMenuItems];
+  const paymentsItem = { path: '/payments', icon: FaCreditCard, label: 'Subscription & Refill Payments', permission: () => true };
+  const allPathsForHeader = [...topMenuItems, ...usersItems, ...wishlistItems, ...presentsItems, conversationItem, paymentsItem, ...bottomMenuItems];
   const headerPath = location.pathname.match(/^\/conversations\/[^/]+$/) ? { path: '/conversations', label: 'View conversation' } : null;
   const currentHeaderLabel = headerPath?.label || allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
 

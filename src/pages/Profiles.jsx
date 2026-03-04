@@ -285,10 +285,28 @@ const Profiles = () => {
                       </div>
                       <div>
                         <p className="text-2xl font-bold bg-gradient-nex bg-clip-text text-transparent">
-                          {selectedProfile.user?.credits || 0}
+                          {selectedProfile.user?.credits ?? 0}
                         </p>
                         <p className="text-sm text-gray-500">Credits</p>
                       </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      <span className="text-gray-500">Subscription:</span>
+                      <span className="font-medium text-gray-800 capitalize">
+                        {selectedProfile.user?.subscriptionPlan || 'free'}
+                      </span>
+                      {selectedProfile.user?.subscriptionExpires && (
+                        <>
+                          <span className="text-gray-400">·</span>
+                          <span className="text-gray-500">Expires:</span>
+                          <span className="text-gray-800">
+                            {new Date(selectedProfile.user.subscriptionExpires).toLocaleDateString()}
+                          </span>
+                        </>
+                      )}
+                      {(selectedProfile.user?.subscriptionPlan === 'free' || !selectedProfile.user?.subscriptionPlan) && (
+                        <span className="text-gray-500 italic">(cancelled or none)</span>
+                      )}
                     </div>
                   </div>
                 </div>

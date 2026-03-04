@@ -14,6 +14,9 @@ import {
   FaTrash,
   FaCircle,
   FaEdit,
+  FaCreditCard,
+  FaCoins,
+  FaTimes,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
@@ -51,6 +54,10 @@ const Users = ({ defaultTypeFilter }) => {
     locationCountry: '',
   });
   const [savingEditProfile, setSavingEditProfile] = useState(false);
+  const [showPaymentsModal, setShowPaymentsModal] = useState(false);
+  const [paymentsModalUser, setPaymentsModalUser] = useState(null);
+  const [userPayments, setUserPayments] = useState([]);
+  const [loadingUserPayments, setLoadingUserPayments] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -158,6 +165,30 @@ const Users = ({ defaultTypeFilter }) => {
     } catch (error) {
       console.error('Error deleting user:', error);
       alert(error.response?.data?.message || 'Failed to delete user');
+    }
+  };
+
+  const isSubscriptionActive = (user) => {
+    const plan = user.subscriptionPlan;
+    if (!plan || plan === 'free') return false;
+    const expires = user.subscriptionExpires;
+    if (!expires) return true;
+    return new Date(expires) > new Date();
+  };
+
+  const handleViewPayments = async (user) => {
+    setPaymentsModalUser(user);
+    setShowPaymentsModal(true);
+    setUserPayments([]);
+    setLoadingUserPayments(true);
+    try {
+      const { data } = await axios.get(`/api/admin/payments?userId=${user.id}`);
+      setUserPayments(data.payments || []);
+    } catch (err) {
+      console.error('Error fetching user payments:', err);
+      setUserPayments([]);
+    } finally {
+      setLoadingUserPayments(false);
     }
   };
 
@@ -353,7 +384,13 @@ const Users = ({ defaultTypeFilter }) => {
                   VIP
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Subscription
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total Spent
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payments
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Online
@@ -422,8 +459,34 @@ const Users = ({ defaultTypeFilter }) => {
                       <span className="text-gray-400 text-xs">—</span>
                     )}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(user.userType === 'regular' || !user.userType) ? (
+                      isSubscriptionActive(user) ? (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800" title={user.subscriptionExpires ? `Expires ${new Date(user.subscriptionExpires).toLocaleDateString()}` : 'Active'}>
+                          Active
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                          Not active
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.totalCreditsSpent ?? 0} cr
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handleViewPayments(user)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 text-sm"
+                      title="View subscription & refill payments"
+                    >
+                      <FaCreditCard className="flex-shrink-0" />
+                      View payments
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
@@ -751,6 +814,68 @@ const Users = ({ defaultTypeFilter }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* User payments modal (subscription & refill) */}
+      {showPaymentsModal && paymentsModalUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-800">
+                Payments — {paymentsModalUser.profile?.firstName && paymentsModalUser.profile?.lastName
+                  ? `${paymentsModalUser.profile.firstName} ${paymentsModalUser.profile.lastName}`
+                  : paymentsModalUser.email}
+              </h3>
+              <button
+                type="button"
+                onClick={() => { setShowPaymentsModal(false); setPaymentsModalUser(null); setUserPayments([]); }}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto px-6 py-4">
+              {loadingUserPayments ? (
+                <div className="text-center py-8 text-gray-500">Loading payments…</div>
+              ) : userPayments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No subscription or refill payments for this user.</div>
+              ) : (
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Credits</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {userPayments.map((p) => (
+                      <tr key={p.id}>
+                        <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                          {new Date(p.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {p.type === 'subscription' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <FaCreditCard /> Subscription
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                              <FaCoins /> Refill
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-gray-600 max-w-xs truncate" title={p.description}>{p.description || '—'}</td>
+                        <td className="px-3 py-2 text-right font-medium text-gray-900">+{p.amount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       )}
