@@ -74,7 +74,6 @@ const AdminLayout = ({ children }) => {
   ];
 
   const bottomMenuItems = [
-    { path: '/payments', icon: FaCreditCard, label: 'Subscription & Refill Payments', permission: () => true },
     { path: '/settings', icon: FaCog, label: 'Settings', permission: () => true },
   ];
 
