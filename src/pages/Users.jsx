@@ -57,6 +57,7 @@ const Users = ({ defaultTypeFilter }) => {
   const [showPaymentsModal, setShowPaymentsModal] = useState(false);
   const [paymentsModalUser, setPaymentsModalUser] = useState(null);
   const [userPayments, setUserPayments] = useState([]);
+  const [userSubscriptionSummary, setUserSubscriptionSummary] = useState(null); // { plan, expires, cancelledAt }
   const [loadingUserPayments, setLoadingUserPayments] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -180,13 +181,16 @@ const Users = ({ defaultTypeFilter }) => {
     setPaymentsModalUser(user);
     setShowPaymentsModal(true);
     setUserPayments([]);
+    setUserSubscriptionSummary(null);
     setLoadingUserPayments(true);
     try {
       const { data } = await axios.get(`/api/admin/payments?userId=${user.id}`);
       setUserPayments(data.payments || []);
+      setUserSubscriptionSummary(data.subscription || null);
     } catch (err) {
       console.error('Error fetching user payments:', err);
       setUserPayments([]);
+      setUserSubscriptionSummary(null);
     } finally {
       setLoadingUserPayments(false);
     }
@@ -461,9 +465,14 @@ const Users = ({ defaultTypeFilter }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {(user.userType === 'regular' || !user.userType) ? (
-                      isSubscriptionActive(user) ? (
+                      user.subscriptionCancelledAt ? (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700" title={user.subscriptionEndsAt ? `Ends ${new Date(user.subscriptionEndsAt).toLocaleDateString()}` : `Cancelled ${new Date(user.subscriptionCancelledAt).toLocaleDateString()}`}>
+                          Cancelled {new Date(user.subscriptionCancelledAt).toLocaleDateString(undefined, { dateStyle: 'short' })}
+                          {user.subscriptionEndsAt && <> · Ends {new Date(user.subscriptionEndsAt).toLocaleDateString(undefined, { dateStyle: 'short' })}</>}
+                        </span>
+                      ) : isSubscriptionActive(user) ? (
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800" title={user.subscriptionExpires ? `Expires ${new Date(user.subscriptionExpires).toLocaleDateString()}` : 'Active'}>
-                          Active
+                          Active · {user.subscriptionPlan || '—'} {user.subscriptionExpires ? `(${new Date(user.subscriptionExpires).toLocaleDateString(undefined, { dateStyle: 'short' })})` : ''}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
@@ -830,13 +839,37 @@ const Users = ({ defaultTypeFilter }) => {
               </h3>
               <button
                 type="button"
-                onClick={() => { setShowPaymentsModal(false); setPaymentsModalUser(null); setUserPayments([]); }}
+                onClick={() => { setShowPaymentsModal(false); setPaymentsModalUser(null); setUserPayments([]); setUserSubscriptionSummary(null); }}
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
               >
                 <FaTimes className="w-5 h-5" />
               </button>
             </div>
             <div className="flex-1 overflow-auto px-6 py-4">
+              {userSubscriptionSummary && (
+                <div className="mb-4 p-3 rounded-lg bg-gray-50 border border-gray-200 text-sm">
+                  <div className="font-medium text-gray-700 mb-1">Subscription</div>
+                  {userSubscriptionSummary.cancelledAt ? (
+                    <p className="text-gray-600">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800">Cancelled</span>
+                      {' '}Cancelled on {new Date(userSubscriptionSummary.cancelledAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                      {userSubscriptionSummary.endsAt && (
+                        <> · Subscription ends {new Date(userSubscriptionSummary.endsAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</>
+                      )}
+                    </p>
+                  ) : userSubscriptionSummary.plan && userSubscriptionSummary.plan !== 'free' ? (
+                    <p className="text-gray-600">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                      {' '}Plan: <span className="font-medium capitalize">{userSubscriptionSummary.plan}</span>
+                      {userSubscriptionSummary.expires && (
+                        <> · Expires {new Date(userSubscriptionSummary.expires).toLocaleDateString(undefined, { dateStyle: 'medium' })}</>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-gray-500">No active subscription</p>
+                  )}
+                </div>
+              )}
               {loadingUserPayments ? (
                 <div className="text-center py-8 text-gray-500">Loading payments…</div>
               ) : userPayments.length === 0 ? (
