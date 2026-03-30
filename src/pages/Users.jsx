@@ -59,6 +59,7 @@ const Users = ({ defaultTypeFilter }) => {
   const [userPayments, setUserPayments] = useState([]);
   const [userSubscriptionSummary, setUserSubscriptionSummary] = useState(null); // { plan, expires, cancelledAt }
   const [loadingUserPayments, setLoadingUserPayments] = useState(false);
+  const [deletingAllUsers, setDeletingAllUsers] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -166,6 +167,27 @@ const Users = ({ defaultTypeFilter }) => {
     } catch (error) {
       console.error('Error deleting user:', error);
       alert(error.response?.data?.message || 'Failed to delete user');
+    }
+  };
+
+  const handleDeleteAllUsers = async () => {
+    const label =
+      typeFilter === 'streamers'
+        ? 'all streamers'
+        : typeFilter === 'real'
+          ? 'all real users'
+          : 'all users (real + streamers)';
+
+    try {
+      setDeletingAllUsers(true);
+      await axios.delete(`/api/admin/users?type=${encodeURIComponent(typeFilter || 'all')}`);
+      await fetchUsers();
+      alert(`Bulk delete completed for ${label}.`);
+    } catch (error) {
+      console.error('Error deleting all users:', error);
+      alert(error.response?.data?.message || 'Failed to delete users');
+    } finally {
+      setDeletingAllUsers(false);
     }
   };
 
@@ -306,8 +328,9 @@ const Users = ({ defaultTypeFilter }) => {
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">User Management</h2>
-          {!defaultTypeFilter && (
-            <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center md:ml-auto">
+            {!defaultTypeFilter && (
+              <>
               <button
                 onClick={() => {
                   const canCreate = canCreateUsers && typeof canCreateUsers === 'function' && canCreateUsers();
@@ -357,8 +380,20 @@ const Users = ({ defaultTypeFilter }) => {
                 <option value="noSpend7d">No spend (last 7 days)</option>
                 <option value="noSpend30d">No spend (last 30 days)</option>
               </select>
-            </div>
-          )}
+              </>
+            )}
+            {/* Delete all users — disabled per product request
+            <button
+              onClick={handleDeleteAllUsers}
+              disabled={deletingAllUsers}
+              className="px-4 py-2 rounded-md transition-all flex items-center space-x-2 bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              title="Delete all users by selected type"
+            >
+              <FaTrash className="mr-1" />
+              <span>{deletingAllUsers ? 'Removing...' : 'Remove All'}</span>
+            </button>
+            */}
+          </div>
         </div>
         <div className="relative mb-6">
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -551,6 +586,7 @@ const Users = ({ defaultTypeFilter }) => {
                             <span>Edit</span>
                           </button>
                         )}
+                        {/* Per-user delete — disabled per product request
                         <button
                           onClick={() => handleDeleteUser(user.id)}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50"
@@ -559,6 +595,7 @@ const Users = ({ defaultTypeFilter }) => {
                           <FaTrash className="flex-shrink-0" />
                           <span>Remove</span>
                         </button>
+                        */}
                         <button
                           onClick={() => handleSetOnline(user.id, !user.profile?.isOnline)}
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.profile?.isOnline ? 'text-green-600 hover:text-green-900 hover:bg-green-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}

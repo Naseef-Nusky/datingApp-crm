@@ -303,6 +303,7 @@ const AdminUsers = () => {
                         <FaEdit />
                       </button>
                     )}
+                    {/* Delete system user — disabled per product request
                     {canDeleteAdminUsers() && admin.userType !== 'superadmin' && (
                       <button
                         onClick={() => handleDeleteAdmin(admin.id)}
@@ -312,6 +313,7 @@ const AdminUsers = () => {
                         <FaTrash />
                       </button>
                     )}
+                    */}
                     {admin.userType === 'superadmin' && (
                       <span className="text-gray-400 text-xs">Super Admin cannot be edited</span>
                     )}
