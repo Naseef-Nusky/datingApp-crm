@@ -314,7 +314,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           firstName: formData.firstName.trim(),
           lastName: (formData.lastName || '').trim(),
           age,
-          gender: formData.gender || 'other',
+          gender: formData.gender || 'male',
           seeking: formData.seeking || 'both',
           hometown: formData.hometown || '',
           bio: formData.bio || '',
@@ -381,9 +381,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         if (formData.photo) {
           const photoFormData = new FormData();
           photoFormData.append('photo', formData.photo);
-          await axios.post('/api/profiles/me/photos', photoFormData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          await axios.post('/api/profiles/me/photos', photoFormData);
         }
         await axios.put('/api/auth/me/registration-complete');
         if (onComplete) onComplete();
@@ -418,9 +416,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           const photoFormData = new FormData();
           photoFormData.append('photo', formData.photo);
           try {
-            await axios.post(`${apiUrl}/api/profiles/me/photos`, photoFormData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            await axios.post(`${apiUrl}/api/profiles/me/photos`, photoFormData);
           } catch (photoError) {
             console.error('Photo upload error:', photoError);
           }

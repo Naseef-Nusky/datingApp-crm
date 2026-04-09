@@ -12,6 +12,8 @@ const Dashboard = () => {
     activeUsers: 0,
     newUsersToday: 0,
     verifiedUsers: 0,
+    maleProfiles: 0,
+    femaleProfiles: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +30,8 @@ const Dashboard = () => {
         activeUsers: usersRes.data.activeUsers || 0,
         newUsersToday: usersRes.data.newUsersToday || 0,
         verifiedUsers: usersRes.data.verifiedUsers || 0,
+        maleProfiles: usersRes.data.maleProfiles || 0,
+        femaleProfiles: usersRes.data.femaleProfiles || 0,
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -43,6 +47,18 @@ const Dashboard = () => {
       icon: FaUsers,
       color: 'bg-blue-500',
       change: `+${stats.newUsersToday} today`,
+    },
+    {
+      title: 'Male Profiles',
+      value: stats.maleProfiles,
+      icon: FaUsers,
+      color: 'bg-sky-600',
+    },
+    {
+      title: 'Female Profiles',
+      value: stats.femaleProfiles,
+      icon: FaUsers,
+      color: 'bg-pink-500',
     },
     {
       title: 'Active Users',

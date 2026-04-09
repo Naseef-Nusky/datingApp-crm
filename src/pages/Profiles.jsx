@@ -8,15 +8,18 @@ const Profiles = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [filter, setFilter] = useState('all'); // all, verified, unverified, active, inactive
+  const [genderFilter, setGenderFilter] = useState('all'); // all, male, female
 
   useEffect(() => {
     fetchProfiles();
-  }, [filter]);
+  }, [filter, genderFilter]);
 
   const fetchProfiles = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/admin/profiles?filter=${filter}`);
+      const params = new URLSearchParams({ filter });
+      if (genderFilter && genderFilter !== 'all') params.set('gender', genderFilter);
+      const response = await axios.get(`/api/admin/profiles?${params.toString()}`);
       setProfiles(response.data.profiles || []);
     } catch (error) {
       console.error('Error fetching profiles:', error);
@@ -59,7 +62,7 @@ const Profiles = () => {
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">User Profiles</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -70,6 +73,16 @@ const Profiles = () => {
               <option value="unverified">Unverified</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+            </select>
+            <select
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+              title="Filter by gender"
+            >
+              <option value="all">All genders</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
             </select>
           </div>
         </div>

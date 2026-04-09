@@ -41,6 +41,7 @@ const Users = ({ defaultTypeFilter }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // all, active, inactive, verified, unverified, neverSpent, noSpend7d, noSpend30d
   const [typeFilter, setTypeFilter] = useState(defaultTypeFilter || 'all'); // all, real, streamers
+  const [genderFilter, setGenderFilter] = useState('all'); // all, male, female
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
@@ -60,6 +61,9 @@ const Users = ({ defaultTypeFilter }) => {
   const [userSubscriptionSummary, setUserSubscriptionSummary] = useState(null); // { plan, expires, cancelledAt }
   const [loadingUserPayments, setLoadingUserPayments] = useState(false);
   const [deletingAllUsers, setDeletingAllUsers] = useState(false);
+  /** User IDs selected for bulk delete (profiles are tied to users). */
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -104,7 +108,11 @@ const Users = ({ defaultTypeFilter }) => {
 
   useEffect(() => {
     fetchUsers();
-  }, [filter, typeFilter]);
+  }, [filter, typeFilter, genderFilter]);
+
+  useEffect(() => {
+    setSelectedUserIds([]);
+  }, [filter, typeFilter, genderFilter]);
 
   useEffect(() => {
     if (defaultTypeFilter && defaultTypeFilter !== typeFilter) setTypeFilter(defaultTypeFilter);
@@ -115,6 +123,7 @@ const Users = ({ defaultTypeFilter }) => {
       setLoading(true);
       const params = new URLSearchParams({ filter });
       if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter);
+      if (genderFilter && genderFilter !== 'all') params.set('gender', genderFilter);
       const response = await axios.get(`/api/admin/users?${params.toString()}`);
       setUsers(response.data.users || []);
     } catch (error) {
@@ -162,6 +171,7 @@ const Users = ({ defaultTypeFilter }) => {
     if (!window.confirm('Permanently delete this user and their profile? This cannot be undone.')) return;
     try {
       await axios.delete(`/api/admin/users/${userId}`);
+      setSelectedUserIds((prev) => prev.filter((id) => id !== userId));
       fetchUsers();
       alert('User permanently deleted.');
     } catch (error) {
@@ -225,7 +235,7 @@ const Users = ({ defaultTypeFilter }) => {
       firstName: user.profile?.firstName || '',
       lastName: user.profile?.lastName || '',
       age: user.profile?.age ?? '',
-      gender: user.profile?.gender || 'male',
+      gender: user.profile?.gender === 'female' ? 'female' : 'male',
       bio: user.profile?.bio || '',
       locationCity: user.profile?.location?.city || '',
       locationCountry: user.profile?.location?.country || '',
@@ -315,6 +325,50 @@ const Users = ({ defaultTypeFilter }) => {
     );
   });
 
+  const toggleSelectUser = (userId) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!canEditUsers()) return;
+    const ids = selectedUserIds.filter((id) =>
+      filteredUsers.some((u) => u.id === id)
+    );
+    if (!ids.length) {
+      alert('Select at least one user.');
+      return;
+    }
+    if (
+      !window.confirm(
+        `Permanently delete ${ids.length} user(s) and their profiles? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setBulkDeleting(true);
+    let ok = 0;
+    let fail = 0;
+    try {
+      for (const userId of ids) {
+        try {
+          await axios.delete(`/api/admin/users/${userId}`);
+          ok++;
+        } catch (e) {
+          fail++;
+          console.error(`Delete failed for ${userId}:`, e);
+        }
+      }
+      setSelectedUserIds([]);
+      await fetchUsers();
+      if (fail === 0) alert(`Deleted ${ok} user(s).`);
+      else alert(`Deleted ${ok} user(s). ${fail} failed (see console).`);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -382,6 +436,16 @@ const Users = ({ defaultTypeFilter }) => {
               </select>
               </>
             )}
+            <select
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange"
+              title="Filter by profile gender"
+            >
+              <option value="all">All genders</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
             {/* Delete all users — disabled per product request
             <button
               onClick={handleDeleteAllUsers}
@@ -406,10 +470,41 @@ const Users = ({ defaultTypeFilter }) => {
           />
         </div>
 
+        {canEditUsers() &&
+          filteredUsers.filter((u) => selectedUserIds.includes(u.id)).length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 mb-4 p-3 rounded-lg bg-red-50 border border-red-100">
+              <span className="text-sm font-medium text-red-900">
+                {filteredUsers.filter((u) => selectedUserIds.includes(u.id)).length}{' '}
+                selected
+              </span>
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                disabled={bulkDeleting}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-60"
+              >
+                <FaTrash className="flex-shrink-0" />
+                {bulkDeleting ? 'Deleting…' : 'Delete selected'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedUserIds([])}
+                className="text-sm text-gray-600 hover:text-gray-900 underline"
+              >
+                Clear selection
+              </button>
+            </div>
+          )}
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                {canEditUsers() && (
+                  <th scope="col" className="px-3 py-3 w-10 text-left">
+                    <span className="sr-only">Select row</span>
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
@@ -418,6 +513,9 @@ const Users = ({ defaultTypeFilter }) => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Gender
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   VIP
@@ -451,6 +549,17 @@ const Users = ({ defaultTypeFilter }) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
+                  {canEditUsers() && (
+                    <td className="px-3 py-4 whitespace-nowrap align-middle">
+                      <input
+                        type="checkbox"
+                        checked={selectedUserIds.includes(user.id)}
+                        onChange={() => toggleSelectUser(user.id)}
+                        className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        aria-label={`Select ${user.email}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -486,6 +595,11 @@ const Users = ({ defaultTypeFilter }) => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                       {user.userType === 'regular' || !user.userType ? 'Real user' : user.userType === 'talent' || user.userType === 'streamer' ? 'Streamer' : user.userType}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">
+                      {user.profile?.gender ? String(user.profile.gender).toUpperCase() : '—'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -586,16 +700,15 @@ const Users = ({ defaultTypeFilter }) => {
                             <span>Edit</span>
                           </button>
                         )}
-                        {/* Per-user delete — disabled per product request
                         <button
+                          type="button"
                           onClick={() => handleDeleteUser(user.id)}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50"
-                          title="Permanently delete user"
+                          title="Permanently delete user and profile"
                         >
                           <FaTrash className="flex-shrink-0" />
                           <span>Remove</span>
                         </button>
-                        */}
                         <button
                           onClick={() => handleSetOnline(user.id, !user.profile?.isOnline)}
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.profile?.isOnline ? 'text-green-600 hover:text-green-900 hover:bg-green-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
@@ -725,7 +838,6 @@ const Users = ({ defaultTypeFilter }) => {
                   >
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="other">Other</option>
                   </select>
                 </div>
               </div>
@@ -807,7 +919,6 @@ const Users = ({ defaultTypeFilter }) => {
                   >
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="other">Other</option>
                   </select>
                 </div>
               </div>
