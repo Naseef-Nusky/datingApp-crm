@@ -82,6 +82,7 @@ export const AuthProvider = ({ children }) => {
   const canViewUsers = () => isSuperAdmin() || isViewer(); // Super admin and viewer can view
   const canCreateUsers = () => isSuperAdmin() || isViewer(); // Super admin and viewer can create
   const canEditUsers = () => isSuperAdmin(); // Only super admin can edit/delete users
+  const canToggleUserVerification = () => isSuperAdmin() || isViewer(); // Super admin and viewer can verify/unverify
   const canManageContent = () => isSuperAdmin() || isAdmin();
   const canManageReports = () => isSuperAdmin() || isAdmin();
 
@@ -99,6 +100,7 @@ export const AuthProvider = ({ children }) => {
       canViewUsers,
       canCreateUsers,
       canEditUsers,
+      canToggleUserVerification,
       canManageContent,
       canManageReports,
     }}>

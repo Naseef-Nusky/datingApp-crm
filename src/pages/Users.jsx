@@ -22,7 +22,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Users = ({ defaultTypeFilter }) => {
   const navigate = useNavigate();
-  const { canViewUsers, canEditUsers, canCreateUsers, isAdmin, admin } = useAuth();
+  const { canViewUsers, canEditUsers, canCreateUsers, canToggleUserVerification, isAdmin, admin } = useAuth();
   
   // Debug logging
   useEffect(() => {
@@ -420,22 +420,22 @@ const Users = ({ defaultTypeFilter }) => {
                 <option value="real">Real users</option>
                 <option value="streamers">Streamers</option>
               </select>
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange"
-              >
-                <option value="all">All Users</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="verified">Verified</option>
-                <option value="unverified">Unverified</option>
-                <option value="neverSpent">Without spent (never)</option>
-                <option value="noSpend7d">No spend (last 7 days)</option>
-                <option value="noSpend30d">No spend (last 30 days)</option>
-              </select>
               </>
             )}
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange"
+            >
+              <option value="all">All Users</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="verified">Verified</option>
+              <option value="unverified">Unverified</option>
+              <option value="neverSpent">Without spent (never)</option>
+              <option value="noSpend7d">No spend (last 7 days)</option>
+              <option value="noSpend30d">No spend (last 30 days)</option>
+            </select>
             <select
               value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value)}
@@ -681,7 +681,30 @@ const Users = ({ defaultTypeFilter }) => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {user.isVerified ? (
+                    {canToggleUserVerification() ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleVerified(user.id, user.isVerified)}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition ${
+                          user.isVerified
+                            ? 'text-green-700 bg-green-50 hover:bg-green-100'
+                            : 'text-red-700 bg-red-50 hover:bg-red-100'
+                        }`}
+                        title={user.isVerified ? 'Click to mark Unverified' : 'Click to mark Verified'}
+                      >
+                        {user.isVerified ? (
+                          <>
+                            <FaCheckCircle className="text-green-500" />
+                            <span>Verified</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaTimesCircle className="text-red-500" />
+                            <span>Unverified</span>
+                          </>
+                        )}
+                      </button>
+                    ) : user.isVerified ? (
                       <FaCheckCircle className="text-green-500" />
                     ) : (
                       <FaTimesCircle className="text-red-500" />
@@ -725,14 +748,16 @@ const Users = ({ defaultTypeFilter }) => {
                           {user.isActive ? <FaUserTimes className="flex-shrink-0" /> : <FaUserCheck className="flex-shrink-0" />}
                           <span>{user.isActive ? 'Deactivate' : 'Activate'}</span>
                         </button>
-                        <button
-                          onClick={() => handleToggleVerified(user.id, user.isVerified)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-blue-600 hover:text-blue-900 hover:bg-blue-50"
-                          title={user.isVerified ? 'Unverify' : 'Verify'}
-                        >
-                          <FaCheckCircle className="flex-shrink-0" />
-                          <span>{user.isVerified ? 'Unverify' : 'Verify'}</span>
-                        </button>
+                        {canToggleUserVerification() && (
+                          <button
+                            onClick={() => handleToggleVerified(user.id, user.isVerified)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-blue-600 hover:text-blue-900 hover:bg-blue-50"
+                            title={user.isVerified ? 'Unverify' : 'Verify'}
+                          >
+                            <FaCheckCircle className="flex-shrink-0" />
+                            <span>{user.isVerified ? 'Unverify' : 'Verify'}</span>
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <span className="text-gray-400">—</span>
