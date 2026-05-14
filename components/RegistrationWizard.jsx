@@ -188,7 +188,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     try {
       setCheckingEmail(true);
       setEmailError('');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       const response = await axios.post(`${apiUrl}/api/auth/check-email`, { email });
       return response.data.exists;
     } catch (error) {
