@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import axios from 'axios';
@@ -17,6 +17,8 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
   const [emailError, setEmailError] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registeredUser, setRegisteredUser] = useState(null);
+  /** Prevents double REGISTER (e.g. double-click) from calling the create API twice. */
+  const createSubmitLockRef = useRef(false);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -188,8 +190,9 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     try {
       setCheckingEmail(true);
       setEmailError('');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      const response = await axios.post(`${apiUrl}/api/auth/check-email`, { email });
+      const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+      const url = base ? `${base}/api/auth/check-email` : '/api/auth/check-email';
+      const response = await axios.post(url, { email: email.trim() });
       return response.data.exists;
     } catch (error) {
       console.error('Email check error:', error);
@@ -224,6 +227,14 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         if (crmCreateUser) {
           if (!formData.email || !formData.email.includes('@')) {
             setError('Please enter a valid email');
+            return false;
+          }
+          const emailTrimmed = formData.email.trim();
+          const emailTaken = await checkEmailExists(emailTrimmed);
+          if (emailTaken) {
+            setEmailError(
+              'This email is already in use (another account or a pending signup). Use a different email or delete the existing user first.'
+            );
             return false;
           }
           if (formData.password) {
@@ -300,6 +311,8 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
   };
 
   const handleSubmit = async () => {
+    if (createSubmitLockRef.current) return;
+    createSubmitLockRef.current = true;
     setLoading(true);
     setError('');
 
@@ -309,6 +322,13 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
       if (crmCreateUser) {
         const email = formData.email.trim();
         const password = (formData.password && formData.password.trim()) ? formData.password.trim() : null;
+        const role = formData.userRole || 'user';
+
+        if (role !== 'admin' && !formData.photo) {
+          setError('Please upload a profile photo before registering.');
+          return;
+        }
+
         const payload = {
           email,
           firstName: formData.firstName.trim(),
@@ -322,10 +342,23 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           interests: Array.isArray(formData.interests) ? formData.interests : [],
         };
         if (password) payload.password = password;
-        const role = formData.userRole || 'user';
+
         let response;
         if (role === 'streamer') {
-          response = await axios.post('/api/admin/streamers', payload);
+          const fd = new FormData();
+          fd.append('email', payload.email);
+          fd.append('firstName', payload.firstName);
+          fd.append('lastName', payload.lastName);
+          fd.append('age', String(payload.age));
+          fd.append('gender', payload.gender);
+          fd.append('seeking', payload.seeking);
+          fd.append('hometown', payload.hometown);
+          fd.append('bio', payload.bio);
+          fd.append('idealPartner', payload.idealPartner);
+          fd.append('interests', JSON.stringify(payload.interests));
+          if (password) fd.append('password', password);
+          fd.append('photo', formData.photo);
+          response = await axios.post('/api/admin/streamers/with-photo', fd);
         } else if (role === 'admin') {
           const adminPayload = {
             email,
@@ -336,21 +369,22 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           if (password) adminPayload.password = password;
           response = await axios.post('/api/admin/admins', adminPayload);
         } else {
-          response = await axios.post('/api/admin/users', payload);
+          const fd = new FormData();
+          fd.append('email', payload.email);
+          fd.append('firstName', payload.firstName);
+          fd.append('lastName', payload.lastName);
+          fd.append('age', String(payload.age));
+          fd.append('gender', payload.gender);
+          fd.append('seeking', payload.seeking);
+          fd.append('hometown', payload.hometown);
+          fd.append('bio', payload.bio);
+          fd.append('idealPartner', payload.idealPartner);
+          fd.append('interests', JSON.stringify(payload.interests));
+          if (password) fd.append('password', password);
+          fd.append('photo', formData.photo);
+          response = await axios.post('/api/admin/users/with-photo', fd);
         }
-        const createdId = response?.data?.user?.id ?? response?.data?.admin?.id ?? response?.data?.streamer?.id;
-        if (formData.photo && createdId) {
-          const photoFormData = new FormData();
-          photoFormData.append('photo', formData.photo);
-          try {
-            await axios.post(`/api/admin/profiles/${createdId}/photo`, photoFormData);
-          } catch (photoErr) {
-            console.error('Profile photo upload failed:', photoErr);
-            setError(photoErr.response?.data?.message || 'User created but profile photo upload failed.');
-            setLoading(false);
-            return;
-          }
-        }
+
         setRegisteredUser({
           firstName: formData.firstName,
           email: formData.email,
@@ -433,6 +467,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
       setError(err.response?.data?.message || (completeProfileOnly ? 'Failed to save profile' : crmCreateUser ? 'Failed to create user' : 'Registration failed'));
     } finally {
       setLoading(false);
+      createSubmitLockRef.current = false;
     }
   };
 
