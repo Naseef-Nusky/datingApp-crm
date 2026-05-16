@@ -19,6 +19,7 @@ import {
   FaPlus,
   FaComments,
   FaCreditCard,
+  FaClock,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
@@ -79,7 +80,8 @@ const AdminLayout = ({ children }) => {
 
   const conversationItem = { path: '/conversations', icon: FaComments, label: 'Conversations', permission: () => true };
   const paymentsItem = { path: '/payments', icon: FaCreditCard, label: 'Subscription & Refill Payments', permission: () => true };
-  const allPathsForHeader = [...topMenuItems, ...usersItems, ...wishlistItems, ...presentsItems, conversationItem, paymentsItem, ...bottomMenuItems];
+  const streamerEngagementItem = { path: '/streamer-engagement', icon: FaClock, label: 'Streamer hours', permission: () => true };
+  const allPathsForHeader = [...topMenuItems, ...usersItems, ...wishlistItems, ...presentsItems, conversationItem, paymentsItem, streamerEngagementItem, ...bottomMenuItems];
   const headerPath = location.pathname.match(/^\/conversations\/[^/]+$/) ? { path: '/conversations', label: 'View conversation' } : null;
   const currentHeaderLabel = headerPath?.label || allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
 
@@ -232,6 +234,21 @@ const AdminLayout = ({ children }) => {
               >
                 <FaComments className="text-xl flex-shrink-0" />
                 {sidebarOpen && <span>Conversations</span>}
+              </Link>
+            </li>
+
+            {/* Streamer engagement hours (payroll) */}
+            <li>
+              <Link
+                to="/streamer-engagement"
+                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  location.pathname === '/streamer-engagement'
+                    ? 'bg-gradient-nex text-white'
+                    : 'text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                <FaClock className="text-xl flex-shrink-0" />
+                {sidebarOpen && <span>Streamer hours</span>}
               </Link>
             </li>
 
