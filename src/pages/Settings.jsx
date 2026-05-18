@@ -39,7 +39,6 @@ const Settings = () => {
     siteName: 'Vantage Dating',
     maintenanceMode: false,
     allowRegistrations: true,
-    requireEmailVerification: true,
     maxUploadSize: 10,
     enableNotifications: true,
     maintenanceMessage: '',
@@ -204,7 +203,6 @@ const Settings = () => {
             siteName: settings.siteName,
             maintenanceMode: settings.maintenanceMode,
             allowRegistrations: settings.allowRegistrations,
-            requireEmailVerification: settings.requireEmailVerification,
             maxUploadSize: settings.maxUploadSize,
             enableNotifications: settings.enableNotifications,
             maintenanceMessage: settings.maintenanceMessage || '',
@@ -599,25 +597,6 @@ const Settings = () => {
                 </label>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Require Email Verification
-                  </label>
-                  <p className="text-sm text-gray-500">
-                    Users must verify their email before using the platform
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings.requireEmailVerification}
-                    onChange={(e) => handleChange('requireEmailVerification', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
             </div>
           </section>
 
