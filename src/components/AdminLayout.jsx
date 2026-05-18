@@ -80,7 +80,7 @@ const AdminLayout = ({ children }) => {
 
   const conversationItem = { path: '/conversations', icon: FaComments, label: 'Conversations', permission: () => true };
   const paymentsItem = { path: '/payments', icon: FaCreditCard, label: 'Subscription & Refill Payments', permission: () => true };
-  const streamerEngagementItem = { path: '/streamer-engagement', icon: FaClock, label: 'Streamer hours', permission: () => true };
+  const streamerEngagementItem = { path: '/streamer-engagement', icon: FaClock, label: 'Streamer engagement', permission: () => true };
   const allPathsForHeader = [...topMenuItems, ...usersItems, ...wishlistItems, ...presentsItems, conversationItem, paymentsItem, streamerEngagementItem, ...bottomMenuItems];
   const headerPath = location.pathname.match(/^\/conversations\/[^/]+$/) ? { path: '/conversations', label: 'View conversation' } : null;
   const currentHeaderLabel = headerPath?.label || allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
@@ -248,7 +248,7 @@ const AdminLayout = ({ children }) => {
                 }`}
               >
                 <FaClock className="text-xl flex-shrink-0" />
-                {sidebarOpen && <span>Streamer hours</span>}
+                {sidebarOpen && <span>Streamer engagement</span>}
               </Link>
             </li>
 

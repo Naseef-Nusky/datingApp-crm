@@ -42,7 +42,7 @@ const Settings = () => {
     requireEmailVerification: true,
     maxUploadSize: 10,
     enableNotifications: true,
-    // Credit-related settings (managed via backend)
+    maintenanceMessage: '',
     chatMessage: 0,
     voiceCallPerMinute: 0,
     videoCallPerMinute: 0,
@@ -145,24 +145,32 @@ const Settings = () => {
     });
   };
 
-  // Load credit settings from backend on mount
+  // Load credit + site settings from backend on mount
   useEffect(() => {
-    const loadCreditSettings = async () => {
+    const loadSettings = async () => {
+      const headers = getAuthHeaders();
       try {
-        const { data } = await axios.get('/api/admin/credit-settings', {
-          headers: getAuthHeaders(),
-        });
-        if (data?.settings) {
+        const [creditRes, siteRes] = await Promise.all([
+          axios.get('/api/admin/credit-settings', { headers }),
+          axios.get('/api/admin/site-settings', { headers }),
+        ]);
+        if (creditRes.data?.settings) {
           setSettings((prev) => ({
             ...prev,
-            ...data.settings,
+            ...creditRes.data.settings,
+          }));
+        }
+        if (siteRes.data?.settings) {
+          setSettings((prev) => ({
+            ...prev,
+            ...siteRes.data.settings,
           }));
         }
       } catch (error) {
-        console.error('Error loading credit settings:', error);
+        console.error('Error loading settings:', error);
       }
     };
-    loadCreditSettings();
+    loadSettings();
   }, []);
 
   const handleSave = async () => {
@@ -187,9 +195,23 @@ const Settings = () => {
         subscriptionPacks,
         refillPacks: settings.refillPacks || DEFAULT_REFILL_PACKS,
       };
-      await axios.put('/api/admin/credit-settings', payload, {
-        headers: getAuthHeaders(),
-      });
+      const headers = getAuthHeaders();
+      await Promise.all([
+        axios.put('/api/admin/credit-settings', payload, { headers }),
+        axios.put(
+          '/api/admin/site-settings',
+          {
+            siteName: settings.siteName,
+            maintenanceMode: settings.maintenanceMode,
+            allowRegistrations: settings.allowRegistrations,
+            requireEmailVerification: settings.requireEmailVerification,
+            maxUploadSize: settings.maxUploadSize,
+            enableNotifications: settings.enableNotifications,
+            maintenanceMessage: settings.maintenanceMessage || '',
+          },
+          { headers }
+        ),
+      ]);
 
       alert('Settings saved successfully!');
     } catch (error) {
@@ -530,7 +552,7 @@ const Settings = () => {
                     Maintenance Mode
                   </label>
                   <p className="text-sm text-gray-500">
-                    Temporarily disable the site for maintenance
+                    Temporarily disable the member app and API for everyone except CRM admins. Members see a maintenance page.
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -542,6 +564,19 @@ const Settings = () => {
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Maintenance message (optional)
+                </label>
+                <textarea
+                  value={settings.maintenanceMessage || ''}
+                  onChange={(e) => handleChange('maintenanceMessage', e.target.value)}
+                  rows={3}
+                  placeholder="Shown on the member app during maintenance…"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary text-sm"
+                />
               </div>
 
               <div className="flex items-center justify-between">
