@@ -20,7 +20,7 @@ const Login = () => {
     setLoading(false);
 
     if (result.success) {
-      navigate('/');
+      navigate(result.user?.userType === 'crm_streamer' ? '/users/new' : '/');
     } else {
       setError(result.message || 'Login failed');
     }

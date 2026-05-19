@@ -20,9 +20,36 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
-const Users = ({ defaultTypeFilter }) => {
+const formatDateInput = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const todayDateInput = () => formatDateInput(new Date());
+
+/** Inclusive range: `days` calendar days ending today (7 = today + previous 6 days). */
+const getPresetDateRange = (days = 7) => {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - Math.max(0, days - 1));
+  return { from: formatDateInput(from), to: formatDateInput(to) };
+};
+
+const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
   const navigate = useNavigate();
-  const { canViewUsers, canEditUsers, canCreateUsers, canToggleUserVerification, isAdmin, admin } = useAuth();
+  const {
+    canViewUsers,
+    canEditUsers,
+    canCreateUsers,
+    canToggleUserVerification,
+    isAdmin,
+    isCrmStreamerStaff,
+    admin,
+    loading: authLoading,
+  } = useAuth();
+  const streamerOnly = isCrmStreamerStaff?.() === true;
   
   // Debug logging
   useEffect(() => {
@@ -42,6 +69,9 @@ const Users = ({ defaultTypeFilter }) => {
   const [filter, setFilter] = useState('all'); // all, active, inactive, verified, unverified, neverSpent, noSpend7d, noSpend30d
   const [typeFilter, setTypeFilter] = useState(defaultTypeFilter || 'all'); // all, real, streamers
   const [genderFilter, setGenderFilter] = useState('all'); // all, male, female
+  const [createdFrom, setCreatedFrom] = useState('');
+  const [createdTo, setCreatedTo] = useState('');
+  const [streamerRangeReady, setStreamerRangeReady] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
@@ -107,12 +137,43 @@ const Users = ({ defaultTypeFilter }) => {
   }
 
   useEffect(() => {
+    if (streamerOnly && !newUsersOnly) {
+      navigate('/users/new', { replace: true });
+    }
+  }, [streamerOnly, newUsersOnly, navigate]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!streamerOnly) {
+      setStreamerRangeReady(true);
+      return;
+    }
+    const { from, to } = getPresetDateRange(7);
+    setCreatedFrom(from);
+    setCreatedTo(to);
+    setStreamerRangeReady(true);
+  }, [streamerOnly, authLoading]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (streamerOnly && !streamerRangeReady) return;
+    if (streamerOnly && (!createdFrom || !createdTo)) return;
     fetchUsers();
-  }, [filter, typeFilter, genderFilter]);
+  }, [
+    filter,
+    typeFilter,
+    genderFilter,
+    createdFrom,
+    createdTo,
+    newUsersOnly,
+    streamerOnly,
+    streamerRangeReady,
+    authLoading,
+  ]);
 
   useEffect(() => {
     setSelectedUserIds([]);
-  }, [filter, typeFilter, genderFilter]);
+  }, [filter, typeFilter, genderFilter, createdFrom, createdTo, newUsersOnly]);
 
   useEffect(() => {
     if (defaultTypeFilter && defaultTypeFilter !== typeFilter) setTypeFilter(defaultTypeFilter);
@@ -122,8 +183,20 @@ const Users = ({ defaultTypeFilter }) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ filter });
-      if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter);
+      const effectiveType = streamerOnly || newUsersOnly ? 'real' : typeFilter;
+      if (effectiveType && effectiveType !== 'all') params.set('type', effectiveType);
       if (genderFilter && genderFilter !== 'all') params.set('gender', genderFilter);
+      if (streamerOnly || effectiveType === 'real') {
+        params.set('excludeDummy', '1');
+      }
+      if (newUsersOnly && !streamerOnly) {
+        params.set('newUsers', '1');
+      }
+      if (createdFrom) params.set('createdFrom', createdFrom);
+      if (createdTo) params.set('createdTo', createdTo);
+      if (streamerOnly) {
+        params.set('filter', 'all');
+      }
       const response = await axios.get(`/api/admin/users?${params.toString()}`);
       setUsers(response.data.users || []);
     } catch (error) {
@@ -316,6 +389,30 @@ const Users = ({ defaultTypeFilter }) => {
     }
   };
 
+  const getProfileName = (user) => {
+    const { firstName, lastName } = user.profile || {};
+    if (firstName && lastName) return `${firstName} ${lastName}`;
+    if (firstName) return firstName;
+    if (lastName) return lastName;
+    return '—';
+  };
+
+  const formatProfileCreated = (value) => {
+    if (!value) return '—';
+    return new Date(value).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  };
+
+  const formatProfileGender = (profile) => {
+    const g = String(profile?.gender || '').toLowerCase();
+    if (g === 'male' || g === 'man') return 'Male';
+    if (g === 'female' || g === 'woman') return 'Female';
+    if (g === 'other') return 'Other';
+    return '—';
+  };
+
   const filteredUsers = users.filter((user) => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -377,13 +474,129 @@ const Users = ({ defaultTypeFilter }) => {
     );
   }
 
+  if (streamerOnly) {
+    const streamerFilteredUsers = users.filter((user) => {
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase().trim();
+      return getProfileName(user).toLowerCase().includes(q);
+    });
+
+    const handleStreamerFromChange = (value) => {
+      setCreatedFrom(value);
+      if (createdTo && value && value > createdTo) setCreatedTo(value);
+    };
+
+    const handleStreamerToChange = (value) => {
+      setCreatedTo(value);
+      if (createdFrom && value && value < createdFrom) setCreatedFrom(value);
+    };
+
+    const maxToDate = todayDateInput();
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">New users</h2>
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <div className="relative flex-1 min-w-[200px]">
+              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-10 pl-10 pr-4 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-nex-orange"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
+              <span className="font-medium">From</span>
+              <input
+                type="date"
+                value={createdFrom}
+                max={createdTo || maxToDate}
+                onChange={(e) => handleStreamerFromChange(e.target.value)}
+                className="h-10 px-3 border border-gray-300 rounded-md text-sm"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
+              <span className="font-medium">To</span>
+              <input
+                type="date"
+                value={createdTo}
+                min={createdFrom || undefined}
+                max={maxToDate}
+                onChange={(e) => handleStreamerToChange(e.target.value)}
+                className="h-10 px-3 border border-gray-300 rounded-md text-sm"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
+              <span className="font-medium">Gender</span>
+              <select
+                value={genderFilter}
+                onChange={(e) => setGenderFilter(e.target.value)}
+                className="h-10 px-3 border border-gray-300 rounded-md text-sm bg-white"
+              >
+                <option value="all">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </label>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Gender
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Profile created
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {streamerFilteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {getProfileName(user)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {formatProfileGender(user.profile)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {formatProfileCreated(user.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {streamerFilteredUsers.length === 0 && (
+            <p className="text-center py-8 text-gray-500">
+              {searchTerm.trim()
+                ? 'No users match your search.'
+                : genderFilter !== 'all'
+                  ? `No ${genderFilter === 'male' ? 'male' : 'female'} users found for the selected date range.`
+                  : 'No users found for the selected date range.'}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">User Management</h2>
+          <h2 className="text-2xl font-semibold text-gray-800">
+            {newUsersOnly ? 'New users (last 7 days)' : 'User Management'}
+          </h2>
           <div className="flex gap-2 items-center md:ml-auto">
-            {!defaultTypeFilter && (
+            {!defaultTypeFilter && !streamerOnly && (
               <>
               <button
                 onClick={() => {
@@ -446,6 +659,32 @@ const Users = ({ defaultTypeFilter }) => {
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
+            <input
+              type="date"
+              value={createdFrom}
+              onChange={(e) => setCreatedFrom(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+              title="Created from"
+            />
+            <input
+              type="date"
+              value={createdTo}
+              onChange={(e) => setCreatedTo(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+              title="Created to"
+            />
+            {(createdFrom || createdTo) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatedFrom('');
+                  setCreatedTo('');
+                }}
+                className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Clear dates
+              </button>
+            )}
             {/* Delete all users — disabled per product request
             <button
               onClick={handleDeleteAllUsers}

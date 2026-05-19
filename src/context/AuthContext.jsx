@@ -15,6 +15,8 @@ export const AuthProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const allowedPanelRoles = ['admin', 'superadmin', 'viewer', 'crm_streamer'];
+
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     if (token) {
@@ -28,8 +30,7 @@ export const AuthProvider = ({ children }) => {
   const fetchAdminProfile = async () => {
     try {
       const response = await axios.get('/api/auth/me');
-      const allowedRoles = ['admin', 'superadmin', 'viewer'];
-      if (response.data && response.data.user && allowedRoles.includes(response.data.user.userType)) {
+      if (response.data?.user && allowedPanelRoles.includes(response.data.user.userType)) {
         setAdmin(response.data.user);
       } else {
         localStorage.removeItem('adminToken');
@@ -49,15 +50,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await axios.post('/api/auth/admin-login', { username, password });
-      const allowedRoles = ['admin', 'superadmin', 'viewer'];
-      if (response.data.user && allowedRoles.includes(response.data.user.userType)) {
+      if (response.data.user && allowedPanelRoles.includes(response.data.user.userType)) {
         localStorage.setItem('adminToken', response.data.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         setAdmin(response.data.user);
-        return { success: true };
-      } else {
-        return { success: false, message: 'Admin access required' };
+        return { success: true, user: response.data.user };
       }
+      return { success: false, message: 'Admin access required' };
     } catch (error) {
       return {
         success: false,
@@ -72,38 +71,43 @@ export const AuthProvider = ({ children }) => {
     setAdmin(null);
   };
 
-  // Permission helpers
   const isSuperAdmin = () => admin?.userType === 'superadmin';
   const isAdmin = () => admin?.userType === 'admin';
   const isViewer = () => admin?.userType === 'viewer';
-  // Permission checks
+  const isCrmStreamerStaff = () => admin?.userType === 'crm_streamer';
+
   const canCreateAdminUsers = () => isSuperAdmin();
   const canDeleteAdminUsers = () => isSuperAdmin();
-  const canViewUsers = () => isSuperAdmin() || isViewer(); // Super admin and viewer can view
-  const canCreateUsers = () => isSuperAdmin() || isViewer(); // Super admin and viewer can create
-  const canEditUsers = () => isSuperAdmin(); // Only super admin can edit/delete users
-  const canToggleUserVerification = () => isSuperAdmin() || isViewer(); // Super admin and viewer can verify/unverify
+  const canViewUsers = () => isSuperAdmin() || isViewer() || isCrmStreamerStaff();
+  const canCreateUsers = () => isSuperAdmin() || isViewer();
+  const canEditUsers = () => isSuperAdmin();
+  const canToggleUserVerification = () => isSuperAdmin() || isViewer();
   const canManageContent = () => isSuperAdmin() || isAdmin();
   const canManageReports = () => isSuperAdmin() || isAdmin();
+  const canAccessFullCrm = () => !isCrmStreamerStaff();
 
   return (
-    <AuthContext.Provider value={{ 
-      admin, 
-      loading, 
-      login, 
-      logout,
-      isSuperAdmin,
-      isAdmin,
-      isViewer,
-      canCreateAdminUsers,
-      canDeleteAdminUsers,
-      canViewUsers,
-      canCreateUsers,
-      canEditUsers,
-      canToggleUserVerification,
-      canManageContent,
-      canManageReports,
-    }}>
+    <AuthContext.Provider
+      value={{
+        admin,
+        loading,
+        login,
+        logout,
+        isSuperAdmin,
+        isAdmin,
+        isViewer,
+        isCrmStreamerStaff,
+        canCreateAdminUsers,
+        canDeleteAdminUsers,
+        canViewUsers,
+        canCreateUsers,
+        canEditUsers,
+        canToggleUserVerification,
+        canManageContent,
+        canManageReports,
+        canAccessFullCrm,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

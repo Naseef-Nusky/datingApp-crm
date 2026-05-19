@@ -46,7 +46,7 @@ const AdminUsers = () => {
       setLoading(true);
       const response = await axios.get('/api/admin/admins');
       // Filter to show only admin roles (superadmin, admin, viewer)
-      const adminRoles = ['superadmin', 'admin', 'viewer'];
+      const adminRoles = ['superadmin', 'admin', 'viewer', 'crm_streamer'];
       const filteredAdmins = (response.data.admins || []).filter(admin => 
         adminRoles.includes(admin.userType)
       );
@@ -138,11 +138,23 @@ const AdminUsers = () => {
     setShowEditModal(true);
   };
 
+  const getRoleLabel = (role) => {
+    const labels = {
+      superadmin: 'Super Admin',
+      admin: 'Admin',
+      viewer: 'Viewer',
+      crm_streamer: 'Streamer (CRM)',
+      moderator: 'Moderator',
+    };
+    return labels[role] || role || 'Admin';
+  };
+
   const getRoleBadgeColor = (role) => {
     const colors = {
       superadmin: 'bg-purple-100 text-purple-800',
       admin: 'bg-red-100 text-red-800',
       viewer: 'bg-blue-100 text-blue-800',
+      crm_streamer: 'bg-teal-100 text-teal-800',
     };
     return colors[role] || colors.viewer;
   };
@@ -258,7 +270,7 @@ const AdminUsers = () => {
                             : 'System User'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {admin.userType || 'admin'}
+                          {getRoleLabel(admin.userType)}
                         </div>
                       </div>
                     </div>
@@ -272,7 +284,7 @@ const AdminUsers = () => {
                         admin.userType || 'admin'
                       )}`}
                     >
-                      {admin.userType || 'admin'}
+                      {getRoleLabel(admin.userType)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -404,9 +416,10 @@ const AdminUsers = () => {
                 >
                   <option value="admin">Admin (Full Access)</option>
                   <option value="viewer">Viewer (Read Only)</option>
+                  <option value="crm_streamer">Streamer (CRM login)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Note: Only Super Admin can create system users. Super Admin role cannot be created through this interface.
+                  Streamer (CRM): new users, create members, notifications. Super Admin cannot be created here.
                 </p>
               </div>
               <div className="flex gap-2 pt-4">
@@ -509,11 +522,12 @@ const AdminUsers = () => {
                 >
                   <option value="admin">Admin (Full Access)</option>
                   <option value="viewer">Viewer (Read Only)</option>
+                  <option value="crm_streamer">Streamer (CRM login)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  {selectedAdmin?.userType === 'superadmin' 
-                    ? 'Note: Super Admin role cannot be changed. Only username, password, and name can be updated.'
-                    : 'Note: Only Super Admin can edit system users. Super Admin role cannot be assigned through this interface.'}
+                  {selectedAdmin?.userType === 'superadmin'
+                    ? 'Super Admin role cannot be changed. Only username, password, and name can be updated.'
+                    : 'Streamer (CRM): new users list only. Super Admin cannot be assigned here.'}
                 </p>
               </div>
               <div className="flex gap-2 pt-4">

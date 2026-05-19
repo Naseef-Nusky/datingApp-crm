@@ -17,6 +17,7 @@ import Conversations from './pages/Conversations';
 import ConversationThread from './pages/ConversationThread';
 import Payments from './pages/Payments';
 import StreamerEngagement from './pages/StreamerEngagement';
+import CrmRouteGuard from './components/CrmRouteGuard';
 
 const ProtectedRoute = ({ children }) => {
   const { admin, loading } = useAuth();
@@ -43,8 +44,10 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminLayout>
+                  <CrmRouteGuard>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
+                    <Route path="/users/new" element={<Users defaultTypeFilter="real" newUsersOnly />} />
                     <Route path="/users" element={<Users defaultTypeFilter="real" />} />
                     <Route path="/streamers" element={<Users defaultTypeFilter="streamers" />} />
                     <Route path="/users/create" element={<RegistrationWizard crmCreateUser onSuccessRedirectTo="/users" />} />
@@ -61,6 +64,7 @@ function App() {
                     <Route path="/streamer-engagement" element={<StreamerEngagement />} />
                     <Route path="/settings" element={<Settings />} />
                   </Routes>
+                  </CrmRouteGuard>
                 </AdminLayout>
               </ProtectedRoute>
             }

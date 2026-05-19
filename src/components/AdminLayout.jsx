@@ -20,8 +20,10 @@ import {
   FaComments,
   FaCreditCard,
   FaClock,
+  FaUserPlus,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
+import CrmNotifications from './CrmNotifications';
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -30,17 +32,20 @@ const AdminLayout = ({ children }) => {
   const [presentsOpen, setPresentsOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
-  const { admin, logout, canViewUsers } = useAuth();
+  const { admin, logout, canViewUsers, canAccessFullCrm } = useAuth();
+  const fullCrm = canAccessFullCrm?.() !== false;
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const isUsersActive =
-    location.pathname === '/users' ||
-    location.pathname === '/streamers' ||
-    location.pathname === '/users/create';
+  const isUsersActive = fullCrm
+    ? location.pathname === '/users' ||
+      location.pathname === '/users/new' ||
+      location.pathname === '/streamers' ||
+      location.pathname === '/users/create'
+    : location.pathname === '/users/new';
   const isWishlistActive =
     location.pathname === '/wishlist-categories' || location.pathname === '/wishlist-products';
   const isPresentsActive =
@@ -55,11 +60,14 @@ const AdminLayout = ({ children }) => {
   ];
 
   // Users sub-items (Real users, Streamers, Create user)
-  const usersItems = [
-    { path: '/users', icon: FaUsers, label: 'Real users' },
-    { path: '/streamers', icon: FaVideo, label: 'Streamers' },
-    { path: '/users/create', icon: FaPlus, label: 'Create user' },
-  ];
+  const usersItems = fullCrm
+    ? [
+        { path: '/users/new', icon: FaUserPlus, label: 'New users' },
+        { path: '/users', icon: FaUsers, label: 'Real users' },
+        { path: '/streamers', icon: FaVideo, label: 'Streamers' },
+        { path: '/users/create', icon: FaPlus, label: 'Create user' },
+      ]
+    : [{ path: '/users/new', icon: FaUserPlus, label: 'New users' }];
 
   // Wishlist sub-items (Categories, Products)
   const wishlistItems = [
@@ -81,7 +89,17 @@ const AdminLayout = ({ children }) => {
   const conversationItem = { path: '/conversations', icon: FaComments, label: 'Conversations', permission: () => true };
   const paymentsItem = { path: '/payments', icon: FaCreditCard, label: 'Subscription & Refill Payments', permission: () => true };
   const streamerEngagementItem = { path: '/streamer-engagement', icon: FaClock, label: 'Streamer engagement', permission: () => true };
-  const allPathsForHeader = [...topMenuItems, ...usersItems, ...wishlistItems, ...presentsItems, conversationItem, paymentsItem, streamerEngagementItem, ...bottomMenuItems];
+  const allPathsForHeader = [
+    ...topMenuItems,
+    ...usersItems,
+    ...wishlistItems,
+    ...presentsItems,
+    conversationItem,
+    paymentsItem,
+    streamerEngagementItem,
+    ...bottomMenuItems,
+    { path: '/users/new', label: 'New users' },
+  ];
   const headerPath = location.pathname.match(/^\/conversations\/[^/]+$/) ? { path: '/conversations', label: 'View conversation' } : null;
   const currentHeaderLabel = headerPath?.label || allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
 
@@ -120,7 +138,7 @@ const AdminLayout = ({ children }) => {
 
         <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-1">
-            {topMenuItems.filter((item) => item.permission()).map((item) => {
+            {fullCrm && topMenuItems.filter((item) => item.permission()).map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
               return (
@@ -211,7 +229,7 @@ const AdminLayout = ({ children }) => {
               </li>
             )}
 
-            {/* System Users - single link */}
+            {fullCrm && (
             <li>
               <Link
                 to="/admin-users"
@@ -223,8 +241,9 @@ const AdminLayout = ({ children }) => {
                 {sidebarOpen && <span>System Users</span>}
               </Link>
             </li>
+            )}
 
-            {/* Conversations - single link */}
+            {fullCrm && (
             <li>
               <Link
                 to="/conversations"
@@ -236,8 +255,9 @@ const AdminLayout = ({ children }) => {
                 {sidebarOpen && <span>Conversations</span>}
               </Link>
             </li>
+            )}
 
-            {/* Streamer engagement hours (payroll) */}
+            {fullCrm && (
             <li>
               <Link
                 to="/streamer-engagement"
@@ -251,8 +271,9 @@ const AdminLayout = ({ children }) => {
                 {sidebarOpen && <span>Streamer engagement</span>}
               </Link>
             </li>
+            )}
 
-            {/* Virtual Gifts - single link */}
+            {fullCrm && (
             <li>
               <Link
                 to="/virtual-gifts"
@@ -264,8 +285,10 @@ const AdminLayout = ({ children }) => {
                 {sidebarOpen && <span>Virtual Gifts</span>}
               </Link>
             </li>
+            )}
 
-            {/* Wishlist section with Categories & Products underneath */}
+            {fullCrm && (
+            <>
             <li>
               {sidebarOpen ? (
                 <>
@@ -406,8 +429,10 @@ const AdminLayout = ({ children }) => {
                 </div>
               )}
             </li>
+            </>
+            )}
 
-            {bottomMenuItems.filter((item) => item.permission()).map((item) => {
+            {fullCrm && bottomMenuItems.filter((item) => item.permission()).map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
               return (
@@ -446,7 +471,7 @@ const AdminLayout = ({ children }) => {
               {currentHeaderLabel}
             </h2>
             <div className="flex items-center space-x-4">
-              {/* Profile Section */}
+              <CrmNotifications />
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-nex rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold">
@@ -456,9 +481,15 @@ const AdminLayout = ({ children }) => {
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-800">{admin?.email || 'Admin'}</p>
                   <p className="text-xs text-gray-500 capitalize">
-                  {admin?.userType === 'superadmin' ? 'Super Administrator' : 
-                   admin?.userType === 'admin' ? 'Administrator' :
-                   admin?.userType === 'viewer' ? 'Viewer' : 'Administrator'}
+                  {admin?.userType === 'superadmin'
+                    ? 'Super Administrator'
+                    : admin?.userType === 'admin'
+                      ? 'Administrator'
+                      : admin?.userType === 'viewer'
+                        ? 'Viewer'
+                        : admin?.userType === 'crm_streamer'
+                          ? 'Streamer (CRM)'
+                          : 'Administrator'}
                   </p>
                 </div>
               </div>
