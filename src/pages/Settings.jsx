@@ -43,6 +43,8 @@ const Settings = () => {
     enableNotifications: true,
     maintenanceMessage: '',
     chatMessage: 0,
+    emailSendCredits: 0,
+    mingleCredits: 0,
     voiceCallPerMinute: 0,
     videoCallPerMinute: 0,
     photoViewCredits: 15,
@@ -185,6 +187,8 @@ const Settings = () => {
       });
       const payload = {
         chatMessage: settings.chatMessage,
+        emailSendCredits: settings.emailSendCredits,
+        mingleCredits: settings.mingleCredits,
         voiceCallPerMinute: settings.voiceCallPerMinute,
         videoCallPerMinute: settings.videoCallPerMinute,
         photoViewCredits: settings.photoViewCredits,
@@ -276,6 +280,34 @@ const Settings = () => {
                   min={0}
                   value={settings.chatMessage}
                   onChange={(e) => handleChange('chatMessage', parseInt(e.target.value || '0', 10))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Send Email Cost (credits per email sent)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={settings.emailSendCredits ?? 0}
+                  onChange={(e) =>
+                    handleChange('emailSendCredits', parseInt(e.target.value || '0', 10))
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Let&apos;s Mingle Cost (credits per mingle)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={settings.mingleCredits ?? 0}
+                  onChange={(e) =>
+                    handleChange('mingleCredits', parseInt(e.target.value || '0', 10))
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
                 />
               </div>
