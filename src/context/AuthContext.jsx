@@ -85,6 +85,8 @@ export const AuthProvider = ({ children }) => {
   const canManageContent = () => isSuperAdmin() || isAdmin();
   const canManageReports = () => isSuperAdmin() || isAdmin();
   const canAccessFullCrm = () => !isCrmStreamerStaff();
+  /** Sidebar "New users" tab — CRM streamer staff only (not admin/viewer/superadmin). */
+  const canViewNewUsersTab = () => isCrmStreamerStaff();
 
   return (
     <AuthContext.Provider
@@ -106,6 +108,7 @@ export const AuthProvider = ({ children }) => {
         canManageContent,
         canManageReports,
         canAccessFullCrm,
+        canViewNewUsersTab,
       }}
     >
       {children}

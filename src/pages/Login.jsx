@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaLock, FaUser, FaUserShield } from 'react-icons/fa';
+import { FaUser, FaUserShield } from 'react-icons/fa';
+import PasswordInput from '../../components/PasswordInput';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -76,20 +77,14 @@ const Login = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FaLock className="text-gray-400" />
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange focus:border-transparent"
-                placeholder="Enter your password"
-                required
-                autoComplete="current-password"
-              />
-            </div>
+            <PasswordInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              autoComplete="current-password"
+              showLockIcon
+            />
           </div>
 
           <button

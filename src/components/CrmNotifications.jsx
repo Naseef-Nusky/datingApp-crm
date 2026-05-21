@@ -1,22 +1,37 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FaBell } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 
 export default function CrmNotifications() {
+  const navigate = useNavigate();
+  const { canViewNewUsersTab } = useAuth();
+  const newUsersPath = canViewNewUsersTab?.() ? '/users/new' : '/users';
   const [open, setOpen] = useState(false);
   const [events, setEvents] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     try {
+      setError('');
       const { data } = await axios.get('/api/admin/crm-events', {
         params: { limit: 25 },
       });
       setEvents(data.events || []);
       setUnreadCount(data.unreadCount ?? 0);
     } catch (e) {
+      const msg =
+        e.response?.data?.message ||
+        (e.response?.status === 403
+          ? 'Notifications not available for your role'
+          : e.message || 'Failed to load notifications');
+      setError(msg);
       console.error('CRM notifications:', e);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -25,6 +40,10 @@ export default function CrmNotifications() {
     const id = setInterval(load, 30000);
     return () => clearInterval(id);
   }, [load]);
+
+  useEffect(() => {
+    if (open) load();
+  }, [open, load]);
 
   const markRead = async (eventId) => {
     try {
@@ -80,26 +99,38 @@ export default function CrmNotifications() {
                 </button>
               )}
             </div>
-            {events.length === 0 ? (
+            {loading ? (
+              <p className="p-4 text-sm text-gray-500">Loading…</p>
+            ) : error ? (
+              <p className="p-4 text-sm text-red-600">{error}</p>
+            ) : events.length === 0 ? (
               <p className="p-4 text-sm text-gray-500">No alerts yet.</p>
             ) : (
               <ul className="divide-y divide-gray-100">
                 {events.map((ev) => (
-                  <li key={ev.id} className={!ev.readAt ? 'bg-teal-50/50' : ''}>
+                  <li
+                    key={ev.id}
+                    className={!ev.readAt ? 'bg-teal-50/50 border-l-2 border-teal-500' : ''}
+                  >
                     <Link
-                      to="/users/new"
-                      onClick={() => {
-                        if (!ev.readAt) markRead(ev.id);
+                      to={newUsersPath}
+                      onClick={async (e) => {
+                        if (!ev.readAt) {
+                          e.preventDefault();
+                          await markRead(ev.id);
+                          setOpen(false);
+                          navigate(newUsersPath);
+                          return;
+                        }
                         setOpen(false);
                       }}
                       className="block px-3 py-2 hover:bg-gray-50"
                     >
-                      <p className="text-sm font-medium text-gray-900">{ev.title}</p>
-                      {ev.message && (
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{ev.message}</p>
-                      )}
-                      <p className="text-[10px] text-gray-400 mt-1">
-                        {ev.createdAt ? new Date(ev.createdAt).toLocaleString() : ''}
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        New user added
+                      </p>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">
+                        {ev.message || 'Member'}
                       </p>
                     </Link>
                   </li>

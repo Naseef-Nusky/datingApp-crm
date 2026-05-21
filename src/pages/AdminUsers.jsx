@@ -10,6 +10,7 @@ import {
   FaSearch,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
+import PasswordInput from '../../components/PasswordInput';
 
 const AdminUsers = () => {
   const { canCreateAdminUsers, canDeleteAdminUsers, admin } = useAuth();
@@ -371,12 +372,11 @@ const AdminUsers = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Password *
                 </label>
-                <input
-                  type="password"
+                <PasswordInput
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  boxClassName="w-full border border-gray-300 rounded-md bg-white focus-within:outline-none focus-within:ring-2 focus-within:ring-admin-primary focus-within:border-transparent"
                   autoComplete="new-password"
                 />
               </div>
@@ -475,11 +475,11 @@ const AdminUsers = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   New Password (leave blank to keep current)
                 </label>
-                <input
-                  type="password"
+                <PasswordInput
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
+                  boxClassName="w-full border border-gray-300 rounded-md bg-white focus-within:outline-none focus-within:ring-2 focus-within:ring-admin-primary focus-within:border-transparent"
+                  placeholder="Leave blank to keep current"
                   autoComplete="new-password"
                 />
               </div>

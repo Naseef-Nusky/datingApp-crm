@@ -3,6 +3,44 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import axios from 'axios';
 import RegistrationSuccessModal from './RegistrationSuccessModal';
+import PasswordInput from './PasswordInput';
+
+/** Clear gap between male/female icons (inline style — reliable in all CRM layouts). */
+const GENDER_ICON_GAP = '3.5rem';
+
+function GenderIconPicker({ label, value, onSelect, className = '' }) {
+  const optionClass = (active) =>
+    `flex shrink-0 flex-col items-center justify-center min-w-[4.5rem] transition ${
+      active ? 'text-red-600' : 'text-gray-700'
+    }`;
+  const ringClass = (active) =>
+    `w-16 h-16 rounded-full border-2 flex items-center justify-center mb-2 overflow-hidden ${
+      active ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white'
+    }`;
+
+  return (
+    <div className={`min-w-0 ${className}`}>
+      <label className="block text-gray-700 mb-2 text-sm whitespace-nowrap">{label}</label>
+      <div
+        className="flex flex-row flex-nowrap items-end justify-start py-1"
+        style={{ gap: GENDER_ICON_GAP }}
+      >
+        <button type="button" onClick={() => onSelect('male')} className={optionClass(value === 'male')}>
+          <div className={ringClass(value === 'male')}>
+            <img src="/male_icon.png" alt="Man" className="w-16 h-16 object-cover" />
+          </div>
+          <span className="text-sm font-medium">Man</span>
+        </button>
+        <button type="button" onClick={() => onSelect('female')} className={optionClass(value === 'female')}>
+          <div className={ringClass(value === 'female')}>
+            <img src="/female_icon.png" alt="Woman" className="w-16 h-16 object-cover" />
+          </div>
+          <span className="text-sm font-medium">Woman</span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null, onComplete, crmCreateUser = false, onSuccessRedirectTo = '/users' }) => {
   const navigate = useNavigate();
@@ -516,14 +554,15 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
 
             <div>
               <label className="block text-gray-700 mb-2">Password (min 6 characters)</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={formData.password}
                 onChange={(e) => handleChange('password', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                boxClassName="w-full border border-gray-300 rounded-lg bg-white focus-within:outline-none focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent"
+                inputClassName="py-3"
                 placeholder="Create a password"
                 minLength={6}
                 required
+                autoComplete="new-password"
               />
             </div>
           </div>
@@ -560,24 +599,26 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                 </div>
                 <div>
                   <label className="block text-gray-700 mb-2">Password (optional)</label>
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={formData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    boxClassName="w-full border border-gray-300 rounded-lg bg-white focus-within:outline-none focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent"
+                    inputClassName="py-3"
                     placeholder="Optional"
+                    autoComplete="new-password"
                   />
                   <p className="mt-1 text-sm text-gray-500">Min 6 characters if set. Optional.</p>
                 </div>
                 {formData.password && (
                   <div>
                     <label className="block text-gray-700 mb-2">Confirm password</label>
-                    <input
-                      type="password"
+                    <PasswordInput
                       value={formData.confirmPassword}
                       onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      boxClassName="w-full border border-gray-300 rounded-lg bg-white focus-within:outline-none focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent"
+                      inputClassName="py-3"
                       placeholder="Confirm password"
+                      autoComplete="new-password"
                     />
                   </div>
                 )}
@@ -595,98 +636,22 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-700 mb-2">I am a:</label>
-                <div className="flex space-x-8 sm:space-x-10">
-                  <button
-                    type="button"
-                    onClick={() => handleChange('gender', 'male')}
-                    className={`flex flex-col items-center justify-center transition ${
-                      formData.gender === 'male'
-                        ? 'text-red-600'
-                        : 'text-gray-700'
-                    }`}
-                  >
-                    <div
-                      className={`w-16 h-16 rounded-full border-2 flex items-center justify-center mb-1 overflow-hidden ${
-                        formData.gender === 'male'
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-300 bg-white'
-                      }`}
-                    >
-                      <img src="/male_icon.png" alt="Man" className="w-16 h-16 object-cover" />
-                    </div>
-                    <span className="text-sm font-medium">Man</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleChange('gender', 'female')}
-                    className={`flex flex-col items-center justify-center transition ${
-                      formData.gender === 'female'
-                        ? 'text-red-600'
-                        : 'text-gray-700'
-                    }`}
-                  >
-                    <div
-                      className={`w-16 h-16 rounded-full border-2 flex items-center justify-center mb-1 overflow-hidden ${
-                        formData.gender === 'female'
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-300 bg-white'
-                      }`}
-                    >
-                      <img src="/female_icon.png" alt="Woman" className="w-16 h-16 object-cover" />
-                    </div>
-                    <span className="text-sm font-medium">Woman</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-gray-700 mb-2">Seeking a:</label>
-                <div className="flex space-x-8 sm:space-x-10">
-                  <button
-                    type="button"
-                    onClick={() => handleChange('seeking', 'male')}
-                    className={`flex flex-col items-center justify-center transition ${
-                      formData.seeking === 'male'
-                        ? 'text-red-600'
-                        : 'text-gray-700'
-                    }`}
-                  >
-                    <div
-                      className={`w-16 h-16 rounded-full border-2 flex items-center justify-center mb-1 overflow-hidden ${
-                        formData.seeking === 'male'
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-300 bg-white'
-                      }`}
-                    >
-                      <img src="/male_icon.png" alt="Man" className="w-16 h-16 object-cover" />
-                    </div>
-                    <span className="text-sm font-medium">Man</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleChange('seeking', 'female')}
-                    className={`flex flex-col items-center justify-center transition ${
-                      formData.seeking === 'female'
-                        ? 'text-red-600'
-                        : 'text-gray-700'
-                    }`}
-                  >
-                    <div
-                      className={`w-16 h-16 rounded-full border-2 flex items-center justify-center mb-1 overflow-hidden ${
-                        formData.seeking === 'female'
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-300 bg-white'
-                      }`}
-                    >
-                      <img src="/female_icon.png" alt="Woman" className="w-16 h-16 object-cover" />
-                    </div>
-                    <span className="text-sm font-medium">Woman</span>
-                  </button>
-                </div>
-              </div>
+            <div
+              className="flex flex-row flex-nowrap items-start w-full"
+              style={{ columnGap: '2.5rem' }}
+            >
+              <GenderIconPicker
+                className="flex-1 min-w-0"
+                label="I am a:"
+                value={formData.gender}
+                onSelect={(g) => handleChange('gender', g)}
+              />
+              <GenderIconPicker
+                className="flex-1 min-w-0"
+                label="Seeking a:"
+                value={formData.seeking}
+                onSelect={(g) => handleChange('seeking', g)}
+              />
             </div>
 
             <div>

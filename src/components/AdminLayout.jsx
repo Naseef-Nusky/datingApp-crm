@@ -32,20 +32,23 @@ const AdminLayout = ({ children }) => {
   const [presentsOpen, setPresentsOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
-  const { admin, logout, canViewUsers, canAccessFullCrm } = useAuth();
+  const { admin, logout, canViewUsers, canAccessFullCrm, canViewNewUsersTab, isCrmStreamerStaff } =
+    useAuth();
   const fullCrm = canAccessFullCrm?.() !== false;
+  const streamerCrm = canViewNewUsersTab?.() === true || isCrmStreamerStaff?.() === true;
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const isUsersActive = fullCrm
-    ? location.pathname === '/users' ||
-      location.pathname === '/users/new' ||
-      location.pathname === '/streamers' ||
-      location.pathname === '/users/create'
-    : location.pathname === '/users/new';
+  const isUsersActive = streamerCrm
+    ? false
+    : fullCrm &&
+      (location.pathname === '/users' ||
+        location.pathname === '/streamers' ||
+        location.pathname === '/users/create');
+  const isNewUsersActive = location.pathname === '/users/new';
   const isWishlistActive =
     location.pathname === '/wishlist-categories' || location.pathname === '/wishlist-products';
   const isPresentsActive =
@@ -59,15 +62,14 @@ const AdminLayout = ({ children }) => {
     { path: '/', icon: FaHome, label: 'Dashboard', permission: () => true },
   ];
 
-  // Users sub-items (Real users, Streamers, Create user)
+  // Full CRM: Real users, Streamers, Create user (no "New users" — streamer staff only)
   const usersItems = fullCrm
     ? [
-        { path: '/users/new', icon: FaUserPlus, label: 'New users' },
         { path: '/users', icon: FaUsers, label: 'Real users' },
         { path: '/streamers', icon: FaVideo, label: 'Streamers' },
         { path: '/users/create', icon: FaPlus, label: 'Create user' },
       ]
-    : [{ path: '/users/new', icon: FaUserPlus, label: 'New users' }];
+    : [];
 
   // Wishlist sub-items (Categories, Products)
   const wishlistItems = [
@@ -98,7 +100,7 @@ const AdminLayout = ({ children }) => {
     paymentsItem,
     streamerEngagementItem,
     ...bottomMenuItems,
-    { path: '/users/new', label: 'New users' },
+    ...(streamerCrm ? [{ path: '/users/new', label: 'New users' }] : []),
   ];
   const headerPath = location.pathname.match(/^\/conversations\/[^/]+$/) ? { path: '/conversations', label: 'View conversation' } : null;
   const currentHeaderLabel = headerPath?.label || allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
@@ -156,8 +158,23 @@ const AdminLayout = ({ children }) => {
               );
             })}
 
-            {/* Users section with Real users, Streamers, Create user underneath */}
-            {canViewUsers && canViewUsers() && (
+            {/* CRM streamer staff: New users only */}
+            {streamerCrm && (
+              <li>
+                <Link
+                  to="/users/new"
+                  className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                    isNewUsersActive ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  <FaUserPlus className="text-xl flex-shrink-0" />
+                  {sidebarOpen && <span>New users</span>}
+                </Link>
+              </li>
+            )}
+
+            {/* Full CRM: Users (Real users, Streamers, Create user) */}
+            {fullCrm && canViewUsers && canViewUsers() && usersItems.length > 0 && (
               <li>
                 {sidebarOpen ? (
                   <>
