@@ -37,6 +37,7 @@ const AdminUsers = () => {
     lastName: '',
     role: 'admin', // superadmin, admin, viewer - default is 'admin'
   });
+  const [createError, setCreateError] = useState('');
 
   useEffect(() => {
     fetchAdminUsers();
@@ -59,16 +60,41 @@ const AdminUsers = () => {
     }
   };
 
+  const formatApiError = (error, fallback) => {
+    const data = error.response?.data;
+    if (data?.message) return data.message;
+    if (Array.isArray(data?.errors) && data.errors.length) {
+      return data.errors.map((e) => e.msg || e.message).filter(Boolean).join('; ');
+    }
+    return fallback;
+  };
+
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
+    setCreateError('');
+    const email = formData.username.trim().toLowerCase();
+    const password = formData.password;
+    if (!email.includes('@') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setCreateError('Username must be a valid email (e.g. staff@yourcompany.com).');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setCreateError('Password must be at least 6 characters.');
+      return;
+    }
+    if (!formData.role) {
+      setCreateError('Please select a role.');
+      return;
+    }
     try {
       await axios.post('/api/admin/admins', {
-        email: formData.username.trim(),
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        email,
+        password,
+        firstName: formData.firstName.trim() || email.split('@')[0],
+        lastName: formData.lastName.trim(),
         role: formData.role,
       });
+      setCreateError('');
       setShowCreateModal(false);
       setFormData({
         username: '',
@@ -80,8 +106,14 @@ const AdminUsers = () => {
       fetchAdminUsers();
       alert('System user created successfully!');
     } catch (error) {
-      console.error('Error creating admin:', error);
-      alert(error.response?.data?.message || 'Failed to create system user');
+      console.error('Error creating admin:', error.response?.data || error);
+      let msg = formatApiError(error, 'Failed to create system user');
+      if (error.response?.status === 403) {
+        msg =
+          'Only Super Admin can create system users. Log out and sign in with your superadmin account (e.g. admin@vantagedating.com).';
+      }
+      setCreateError(msg);
+      alert(msg);
     }
   };
 
@@ -109,7 +141,7 @@ const AdminUsers = () => {
       alert('System user updated successfully!');
     } catch (error) {
       console.error('Error updating admin:', error);
-      alert(error.response?.data?.message || 'Failed to update system user');
+      alert(formatApiError(error, 'Failed to update system user'));
     }
   };
 
@@ -123,7 +155,7 @@ const AdminUsers = () => {
       alert('System user deleted successfully!');
     } catch (error) {
       console.error('Error deleting admin:', error);
-      alert('Failed to delete system user');
+      alert(error.response?.data?.message || 'Failed to delete system user');
     }
   };
 
@@ -191,6 +223,7 @@ const AdminUsers = () => {
                 console.log('Admin userType:', admin?.userType);
                 console.log('canCreateAdminUsers function:', canCreateAdminUsers);
                 if (canCreate) {
+                  setCreateError('');
                   setShowCreateModal(true);
                 } else {
                   alert(`You do not have permission to create system users. Current role: ${admin?.userType || 'unknown'}. Only Super Admin can create system users.`);
@@ -316,7 +349,6 @@ const AdminUsers = () => {
                         <FaEdit />
                       </button>
                     )}
-                    {/* Delete system user — disabled per product request
                     {canDeleteAdminUsers() && admin.userType !== 'superadmin' && (
                       <button
                         onClick={() => handleDeleteAdmin(admin.id)}
@@ -326,7 +358,6 @@ const AdminUsers = () => {
                         <FaTrash />
                       </button>
                     )}
-                    */}
                     {admin.userType === 'superadmin' && (
                       <span className="text-gray-400 text-xs">Super Admin cannot be edited</span>
                     )}
@@ -352,13 +383,18 @@ const AdminUsers = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h3 className="text-2xl font-semibold text-gray-800 mb-4">Create System User</h3>
+            {createError && (
+              <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">
+                {createError}
+              </div>
+            )}
             <form onSubmit={handleCreateAdmin} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Username *
                 </label>
                 <input
-                  type="text"
+                  type="email"
                   required
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
@@ -366,7 +402,9 @@ const AdminUsers = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-admin-primary"
                   autoComplete="username"
                 />
-                <p className="text-xs text-gray-500 mt-1">Use email format for login (e.g. admin@example.com)</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Same email can exist as a CRM staff account and as a dating app member — each has its own password.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -374,11 +412,13 @@ const AdminUsers = () => {
                 </label>
                 <PasswordInput
                   required
+                  minLength={6}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   boxClassName="w-full border border-gray-300 rounded-md bg-white focus-within:outline-none focus-within:ring-2 focus-within:ring-admin-primary focus-within:border-transparent"
                   autoComplete="new-password"
                 />
+                <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
