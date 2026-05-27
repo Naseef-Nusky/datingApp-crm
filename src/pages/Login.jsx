@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaUser, FaUserShield } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
 import PasswordInput from '../../components/PasswordInput';
 
 const Login = () => {
@@ -25,12 +25,6 @@ const Login = () => {
     } else {
       setError(result.message || 'Login failed');
     }
-  };
-
-  const handleQuickLogin = () => {
-    setUsername('admin@vantagedating.com');
-    setPassword('Admin123!');
-    setError('');
   };
 
   return (
@@ -96,31 +90,8 @@ const Login = () => {
           </button>
         </form>
 
-        <div className="mt-6 space-y-4">
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={handleQuickLogin}
-              className="inline-flex items-center space-x-2 text-sm text-nex-orange hover:text-nex-pink font-medium transition-colors"
-            >
-              <FaUserShield />
-              <span>Use Super Admin Credentials</span>
-            </button>
-          </div>
-          
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Default Super Admin:</p>
-            <p className="text-xs text-gray-600">
-              <span className="font-medium">Username:</span> admin@vantagedating.com
-            </p>
-            <p className="text-xs text-gray-600">
-              <span className="font-medium">Password:</span> Admin123!
-            </p>
-          </div>
-
-          <div className="text-center text-sm text-gray-600">
-            <p>Only administrators can access this panel</p>
-          </div>
+        <div className="mt-6 text-center text-sm text-gray-600">
+          <p>Only administrators can access this panel</p>
         </div>
       </div>
     </div>
