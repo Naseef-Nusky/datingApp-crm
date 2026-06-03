@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../../components/PasswordInput';
+import ImageCropEditor from '../components/ImageCropEditor';
 
 const formatDateInput = (date) => {
   const y = date.getFullYear();
@@ -86,6 +87,9 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
     locationCountry: '',
   });
   const [savingEditProfile, setSavingEditProfile] = useState(false);
+  const [photoCropSource, setPhotoCropSource] = useState(null);
+  const [pendingEditPhoto, setPendingEditPhoto] = useState(null);
+  const [editPhotoPreview, setEditPhotoPreview] = useState(null);
   const [showPaymentsModal, setShowPaymentsModal] = useState(false);
   const [paymentsModalUser, setPaymentsModalUser] = useState(null);
   const [userPayments, setUserPayments] = useState([]);
@@ -302,8 +306,21 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
     }
   };
 
+  const clearEditPhotoState = () => {
+    setPhotoCropSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setEditPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setPendingEditPhoto(null);
+  };
+
   const handleOpenEditProfile = (user) => {
     if (user.userType !== 'streamer' && user.userType !== 'talent') return;
+    clearEditPhotoState();
     setEditUser(user);
     setEditProfileForm({
       firstName: user.profile?.firstName || '',
@@ -315,6 +332,39 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
       locationCountry: user.profile?.location?.country || '',
     });
     setShowEditModal(true);
+  };
+
+  const handleEditPhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+    setPhotoCropSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const handleEditPhotoCropConfirm = (file) => {
+    setPhotoCropSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setEditPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+    setPendingEditPhoto(file);
+  };
+
+  const handleEditPhotoCropCancel = () => {
+    setPhotoCropSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
   };
 
   const handleSaveEditProfile = async (e) => {
@@ -333,10 +383,18 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
           country: editProfileForm.locationCountry.trim(),
         },
       });
+
+      if (pendingEditPhoto) {
+        const fd = new FormData();
+        fd.append('photo', pendingEditPhoto);
+        await axios.post(`/api/admin/profiles/${editUser.id}/photo`, fd);
+      }
+
+      clearEditPhotoState();
       setShowEditModal(false);
       setEditUser(null);
       fetchUsers();
-      alert('Profile updated.');
+      alert(pendingEditPhoto ? 'Profile and photo updated.' : 'Profile updated.');
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to update profile');
     } finally {
@@ -1143,6 +1201,58 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">Edit profile — {editUser.email}</h3>
             <form onSubmit={handleSaveEditProfile} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Profile photo</label>
+                {photoCropSource ? (
+                  <ImageCropEditor
+                    imageSrc={photoCropSource}
+                    aspect={1}
+                    onConfirm={handleEditPhotoCropConfirm}
+                    onCancel={handleEditPhotoCropCancel}
+                  />
+                ) : (
+                  <div className="flex items-start gap-4">
+                    <div className="w-28 h-28 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
+                      {editPhotoPreview ? (
+                        <img src={editPhotoPreview} alt="New photo" className="w-full h-full object-cover" />
+                      ) : editUser.profile?.photos?.[0]?.url ? (
+                        <img
+                          src={editUser.profile.photos[0].url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                          No photo
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="cursor-pointer inline-block px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
+                        {pendingEditPhoto ? 'Change photo again' : 'Upload & crop photo'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleEditPhotoSelect}
+                        />
+                      </label>
+                      {pendingEditPhoto && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clearEditPhotoState();
+                          }}
+                          className="text-sm text-gray-600 hover:text-gray-800 text-left"
+                        >
+                          Discard new photo
+                        </button>
+                      )}
+                      <p className="text-xs text-gray-500">Drag and zoom to frame the face before saving.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First name</label>
@@ -1229,7 +1339,11 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowEditModal(false); setEditUser(null); }}
+                  onClick={() => {
+                    clearEditPhotoState();
+                    setShowEditModal(false);
+                    setEditUser(null);
+                  }}
                   className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
                 >
                   Cancel

@@ -4,6 +4,7 @@ import { useAuth } from '../src/context/AuthContext';
 import axios from 'axios';
 import RegistrationSuccessModal from './RegistrationSuccessModal';
 import PasswordInput from './PasswordInput';
+import ImageCropEditor from '../src/components/ImageCropEditor';
 
 /** Clear gap between male/female icons (inline style — reliable in all CRM layouts). */
 const GENDER_ICON_GAP = '3.5rem';
@@ -55,6 +56,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
   const [emailError, setEmailError] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registeredUser, setRegisteredUser] = useState(null);
+  const [photoCropSource, setPhotoCropSource] = useState(null);
   /** Prevents double REGISTER (e.g. double-click) from calling the create API twice. */
   const createSubmitLockRef = useRef(false);
 
@@ -194,12 +196,32 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
   };
 
   const handlePhotoChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        photo: e.target.files[0],
-      }));
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
     }
+    setPhotoCropSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const handlePhotoCropConfirm = (file) => {
+    setPhotoCropSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setFormData((prev) => ({ ...prev, photo: file }));
+  };
+
+  const handlePhotoCropCancel = () => {
+    setPhotoCropSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
   };
 
   const calculateAge = () => {
@@ -767,47 +789,71 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         return (
           <div className="space-y-6">
             <h2 className="text-3xl font-bold text-center mb-6">Add photo. Get noticed.</h2>
-            <div className="flex justify-center">
-              <div className="w-64 h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center relative">
-                {formData.photo ? (
-                  <img
-                    src={URL.createObjectURL(formData.photo)}
-                    alt="Preview"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="text-center flex flex-col items-center">
+            {photoCropSource ? (
+              <ImageCropEditor
+                imageSrc={photoCropSource}
+                aspect={1}
+                onConfirm={handlePhotoCropConfirm}
+                onCancel={handlePhotoCropCancel}
+              />
+            ) : (
+              <div className="flex justify-center">
+                <div className="w-64 h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center relative">
+                  {formData.photo ? (
                     <img
-                      src="/profile.png"
-                      alt="Profile placeholder"
-                      className={`${crmCreateUser ? 'w-20 h-20' : 'w-32 h-32'} object-cover rounded-full mb-4`}
+                      src={URL.createObjectURL(formData.photo)}
+                      alt="Preview"
+                      className="w-full h-full object-cover rounded-lg"
                     />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                      id="photo-upload"
-                    />
-                    <label
-                      htmlFor="photo-upload"
-                      className="bg-gray-700 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-gray-800 transition"
-                    >
-                      UPLOAD PROFILE PHOTO
-                    </label>
-                  </div>
-                )}
-                {formData.photo && (
-                  <button
-                    type="button"
-                    onClick={() => handleChange('photo', null)}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
-                  >
-                    ×
-                  </button>
-                )}
+                  ) : (
+                    <div className="text-center flex flex-col items-center">
+                      <img
+                        src="/profile.png"
+                        alt="Profile placeholder"
+                        className={`${crmCreateUser ? 'w-20 h-20' : 'w-32 h-32'} object-cover rounded-full mb-4`}
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoChange}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <label
+                        htmlFor="photo-upload"
+                        className="bg-gray-700 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-gray-800 transition"
+                      >
+                        UPLOAD PROFILE PHOTO
+                      </label>
+                    </div>
+                  )}
+                  {formData.photo && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, photo: null }))}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                      <label
+                        htmlFor="photo-upload-replace"
+                        className="absolute bottom-2 left-2 right-2 bg-gray-800 bg-opacity-90 text-white text-xs py-2 text-center rounded cursor-pointer hover:bg-opacity-100"
+                      >
+                        CHANGE PHOTO
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          className="hidden"
+                          id="photo-upload-replace"
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         );
 
