@@ -199,9 +199,11 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
       }
       if (createdFrom) params.set('createdFrom', createdFrom);
       if (createdTo) params.set('createdTo', createdTo);
+      if (effectiveType === 'real') {
+        params.set('registrationComplete', '1');
+      }
       if (streamerOnly) {
         params.set('filter', 'all');
-        params.set('registrationComplete', '1');
         params.set('organicOnly', '1');
       }
       const response = await axios.get(`/api/admin/users?${params.toString()}`);
