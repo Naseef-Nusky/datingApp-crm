@@ -28,8 +28,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
+    <div className="min-h-[100dvh] bg-black flex items-center justify-center p-4 sm:p-6 safe-area-pad">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-5 sm:p-8">
         <div className="text-center mb-8">
           <img 
             src="/logonew.png" 
@@ -59,7 +59,7 @@ const Login = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-3 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange focus:border-transparent"
                 placeholder="Enter username"
                 required
                 autoComplete="username"
@@ -84,7 +84,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-nex text-white py-2 px-4 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-nex-orange focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full bg-gradient-nex text-white py-3 px-4 text-base min-h-[48px] rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-nex-orange focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>

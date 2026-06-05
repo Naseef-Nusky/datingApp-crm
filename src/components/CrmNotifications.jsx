@@ -68,7 +68,7 @@ export default function CrmNotifications() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+        className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
         aria-label="Notifications"
       >
         <FaBell size={18} />
@@ -86,7 +86,7 @@ export default function CrmNotifications() {
             aria-label="Close notifications"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-auto bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+          <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1.5rem))] max-h-[min(24rem,70vh)] overflow-auto bg-white border border-gray-200 rounded-lg shadow-xl z-50">
             <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
               <span className="font-semibold text-sm text-gray-800">New user alerts</span>
               {unreadCount > 0 && (

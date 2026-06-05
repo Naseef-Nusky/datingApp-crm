@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FaHome,
@@ -25,8 +25,12 @@ import {
 import { useAuth } from '../context/AuthContext';
 import CrmNotifications from './CrmNotifications';
 
+const MOBILE_NAV_MQ = '(max-width: 1023px)';
+
 const AdminLayout = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => typeof window !== 'undefined' && !window.matchMedia(MOBILE_NAV_MQ).matches
+  );
   const [usersOpen, setUsersOpen] = useState(true);
   const [wishlistOpen, setWishlistOpen] = useState(true);
   const [presentsOpen, setPresentsOpen] = useState(true);
@@ -37,10 +41,28 @@ const AdminLayout = ({ children }) => {
   const fullCrm = canAccessFullCrm?.() !== false;
   const streamerCrm = canViewNewUsersTab?.() === true || isCrmStreamerStaff?.() === true;
 
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_NAV_MQ);
+    const onResize = () => {
+      if (!mq.matches) setSidebarOpen(true);
+    };
+    onResize();
+    mq.addEventListener('change', onResize);
+    return () => mq.removeEventListener('change', onResize);
+  }, []);
+
+  useEffect(() => {
+    if (window.matchMedia(MOBILE_NAV_MQ).matches) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const showNavLabels = sidebarOpen;
 
   const isUsersActive = streamerCrm
     ? false
@@ -57,12 +79,8 @@ const AdminLayout = ({ children }) => {
     location.pathname === '/present-orders';
   const isConversationsActive = location.pathname.startsWith('/conversations');
 
-  // Top-level menu items (Dashboard only at top; Users is a dropdown below)
-  const topMenuItems = [
-    { path: '/', icon: FaHome, label: 'Dashboard', permission: () => true },
-  ];
+  const topMenuItems = [{ path: '/', icon: FaHome, label: 'Dashboard', permission: () => true }];
 
-  // Full CRM: Real users, Streamers, Create user (no "New users" — streamer staff only)
   const usersItems = fullCrm
     ? [
         { path: '/users', icon: FaUsers, label: 'Real users' },
@@ -71,13 +89,11 @@ const AdminLayout = ({ children }) => {
       ]
     : [];
 
-  // Wishlist sub-items (Categories, Products)
   const wishlistItems = [
     { path: '/wishlist-categories', icon: FaTags, label: 'Categories' },
     { path: '/wishlist-products', icon: FaGift, label: 'Products' },
   ];
 
-  // Presents sub-items (Categories, Catalog, Orders)
   const presentsItems = [
     { path: '/present-categories', icon: FaTags, label: 'Present Categories' },
     { path: '/presents', icon: FaGift, label: 'Presents Catalog' },
@@ -102,86 +118,109 @@ const AdminLayout = ({ children }) => {
     ...bottomMenuItems,
     ...(streamerCrm ? [{ path: '/users/new', label: 'New users' }] : []),
   ];
-  const headerPath = location.pathname.match(/^\/conversations\/[^/]+$/) ? { path: '/conversations', label: 'View conversation' } : null;
-  const currentHeaderLabel = headerPath?.label || allPathsForHeader.find((item) => item.path === location.pathname)?.label || 'Dashboard';
+  const headerPath = location.pathname.match(/^\/conversations\/[^/]+$/)
+    ? { path: '/conversations', label: 'View conversation' }
+    : null;
+  const currentHeaderLabel =
+    headerPath?.label ||
+    allPathsForHeader.find((item) => item.path === location.pathname)?.label ||
+    'Dashboard';
+
+  const closeMobileNav = () => {
+    if (window.matchMedia(MOBILE_NAV_MQ).matches) setSidebarOpen(false);
+  };
+
+  const navLinkClass = (isActive) =>
+    `flex items-center space-x-3 p-3 rounded-lg transition-colors min-h-[44px] ${
+      isActive ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
+    }`;
 
   return (
-    <div className="flex h-screen bg-admin-light">
-      {/* Sidebar */}
+    <div className="flex h-[100dvh] min-h-screen bg-admin-light overflow-hidden">
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          aria-label="Close menu"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-black text-white transition-all duration-300 flex flex-col`}
+        className={`fixed lg:static inset-y-0 left-0 z-40 flex flex-col bg-black text-white transition-all duration-300 ease-in-out w-64 shrink-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } ${sidebarOpen ? 'lg:w-64' : 'lg:w-20'}`}
       >
-        <div className="p-4 flex items-center justify-between border-b border-gray-700">
-          {sidebarOpen && (
-            <img 
-              src="/logonew.png" 
-              alt="Logo" 
-              className="h-10 w-auto object-contain"
-              onError={(e) => { e.target.style.display = 'none'; }}
+        <div className="p-4 flex items-center justify-between border-b border-gray-700 min-h-[60px]">
+          {showNavLabels && (
+            <img
+              src="/logonew.png"
+              alt="Logo"
+              className="h-10 w-auto object-contain max-w-[140px]"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
             />
           )}
-          {!sidebarOpen && (
-            <img 
-              src="/logonew.png" 
-              alt="Logo" 
-              className="h-10 w-auto object-contain mx-auto"
-              onError={(e) => { e.target.style.display = 'none'; }}
+          {!showNavLabels && (
+            <img
+              src="/logonew.png"
+              alt="Logo"
+              className="h-10 w-auto object-contain mx-auto lg:mx-auto"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
             />
           )}
           <button
+            type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 hover:bg-gray-700 rounded"
+            className="p-2 hover:bg-gray-700 rounded min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label={sidebarOpen ? 'Collapse menu' : 'Expand menu'}
           >
             {sidebarOpen ? <FaTimes /> : <FaBars />}
           </button>
         </div>
 
-        <nav className="flex-1 p-4 overflow-y-auto">
+        <nav className="flex-1 p-3 sm:p-4 overflow-y-auto overscroll-contain">
           <ul className="space-y-1">
-            {fullCrm && topMenuItems.filter((item) => item.permission()).map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                      isActive ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    <Icon className="text-xl flex-shrink-0" />
-                    {sidebarOpen && <span>{item.label}</span>}
-                  </Link>
-                </li>
-              );
-            })}
+            {fullCrm &&
+              topMenuItems
+                .filter((item) => item.permission())
+                .map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <li key={item.path}>
+                      <Link to={item.path} onClick={closeMobileNav} className={navLinkClass(isActive)}>
+                        <Icon className="text-xl flex-shrink-0" />
+                        {showNavLabels && <span>{item.label}</span>}
+                      </Link>
+                    </li>
+                  );
+                })}
 
-            {/* CRM streamer staff: New users only */}
             {streamerCrm && (
               <li>
                 <Link
                   to="/users/new"
-                  className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                    isNewUsersActive ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
-                  }`}
+                  onClick={closeMobileNav}
+                  className={navLinkClass(isNewUsersActive)}
                 >
                   <FaUserPlus className="text-xl flex-shrink-0" />
-                  {sidebarOpen && <span>New users</span>}
+                  {showNavLabels && <span>New users</span>}
                 </Link>
               </li>
             )}
 
-            {/* Full CRM: Users (Real users, Streamers, Create user) */}
             {fullCrm && canViewUsers && canViewUsers() && usersItems.length > 0 && (
               <li>
-                {sidebarOpen ? (
+                {showNavLabels ? (
                   <>
                     <button
                       type="button"
                       onClick={() => setUsersOpen(!usersOpen)}
-                      className={`w-full flex items-center justify-between space-x-3 p-3 rounded-lg transition-colors ${
+                      className={`w-full flex items-center justify-between space-x-3 p-3 rounded-lg transition-colors min-h-[44px] ${
                         isUsersActive ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700'
                       }`}
                     >
@@ -200,8 +239,11 @@ const AdminLayout = ({ children }) => {
                             <li key={item.path}>
                               <Link
                                 to={item.path}
-                                className={`flex items-center space-x-3 py-2 px-3 rounded-lg transition-colors text-sm ${
-                                  isActive ? 'bg-gradient-nex text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
+                                onClick={closeMobileNav}
+                                className={`flex items-center space-x-3 py-2 px-3 rounded-lg transition-colors text-sm min-h-[40px] ${
+                                  isActive
+                                    ? 'bg-gradient-nex text-white'
+                                    : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
                                 }`}
                               >
                                 <SubIcon className="text-lg flex-shrink-0" />
@@ -217,7 +259,7 @@ const AdminLayout = ({ children }) => {
                   <div className="relative group">
                     <button
                       type="button"
-                      className="flex items-center justify-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 w-full"
+                      className="flex items-center justify-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 w-full min-h-[44px]"
                       title="Users"
                     >
                       <FaUsers className="text-xl" />
@@ -247,266 +289,273 @@ const AdminLayout = ({ children }) => {
             )}
 
             {fullCrm && (
-            <li>
-              <Link
-                to="/admin-users"
-                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                  location.pathname === '/admin-users' ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                <FaUserShield className="text-xl flex-shrink-0" />
-                {sidebarOpen && <span>System Users</span>}
-              </Link>
-            </li>
+              <li>
+                <Link
+                  to="/admin-users"
+                  onClick={closeMobileNav}
+                  className={navLinkClass(location.pathname === '/admin-users')}
+                >
+                  <FaUserShield className="text-xl flex-shrink-0" />
+                  {showNavLabels && <span>System Users</span>}
+                </Link>
+              </li>
             )}
 
             {fullCrm && (
-            <li>
-              <Link
-                to="/conversations"
-                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                  isConversationsActive ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                <FaComments className="text-xl flex-shrink-0" />
-                {sidebarOpen && <span>Conversations</span>}
-              </Link>
-            </li>
+              <li>
+                <Link
+                  to="/conversations"
+                  onClick={closeMobileNav}
+                  className={navLinkClass(isConversationsActive)}
+                >
+                  <FaComments className="text-xl flex-shrink-0" />
+                  {showNavLabels && <span>Conversations</span>}
+                </Link>
+              </li>
             )}
 
             {fullCrm && (
-            <li>
-              <Link
-                to="/streamer-engagement"
-                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                  location.pathname === '/streamer-engagement'
-                    ? 'bg-gradient-nex text-white'
-                    : 'text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                <FaClock className="text-xl flex-shrink-0" />
-                {sidebarOpen && <span>Streamer engagement</span>}
-              </Link>
-            </li>
+              <li>
+                <Link
+                  to="/streamer-engagement"
+                  onClick={closeMobileNav}
+                  className={navLinkClass(location.pathname === '/streamer-engagement')}
+                >
+                  <FaClock className="text-xl flex-shrink-0" />
+                  {showNavLabels && <span>Streamer engagement</span>}
+                </Link>
+              </li>
             )}
 
             {fullCrm && (
-            <li>
-              <Link
-                to="/virtual-gifts"
-                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                  location.pathname === '/virtual-gifts' ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                <FaGem className="text-xl flex-shrink-0" />
-                {sidebarOpen && <span>Virtual Gifts</span>}
-              </Link>
-            </li>
+              <li>
+                <Link
+                  to="/virtual-gifts"
+                  onClick={closeMobileNav}
+                  className={navLinkClass(location.pathname === '/virtual-gifts')}
+                >
+                  <FaGem className="text-xl flex-shrink-0" />
+                  {showNavLabels && <span>Virtual Gifts</span>}
+                </Link>
+              </li>
             )}
 
             {fullCrm && (
-            <>
-            <li>
-              {sidebarOpen ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setWishlistOpen(!wishlistOpen)}
-                    className={`w-full flex items-center justify-between space-x-3 p-3 rounded-lg transition-colors ${
-                      isWishlistActive ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    <span className="flex items-center space-x-3">
-                      <FaHeart className="text-xl flex-shrink-0" />
-                      <span>Wishlist</span>
-                    </span>
-                    {wishlistOpen ? <FaChevronDown className="text-sm" /> : <FaChevronRight className="text-sm" />}
-                  </button>
-                  {wishlistOpen && (
-                    <ul className="mt-1 ml-4 pl-2 border-l border-gray-600 space-y-1">
-                      {wishlistItems.map((item) => {
-                        const SubIcon = item.icon;
-                        const isActive = location.pathname === item.path;
-                        return (
-                          <li key={item.path}>
-                            <Link
-                              to={item.path}
-                              className={`flex items-center space-x-3 py-2 px-3 rounded-lg transition-colors text-sm ${
-                                isActive ? 'bg-gradient-nex text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
-                              }`}
-                            >
-                              <SubIcon className="text-lg flex-shrink-0" />
-                              <span>{item.label}</span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
+              <>
+                <li>
+                  {showNavLabels ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setWishlistOpen(!wishlistOpen)}
+                        className={`w-full flex items-center justify-between space-x-3 p-3 rounded-lg transition-colors min-h-[44px] ${
+                          isWishlistActive ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="flex items-center space-x-3">
+                          <FaHeart className="text-xl flex-shrink-0" />
+                          <span>Wishlist</span>
+                        </span>
+                        {wishlistOpen ? <FaChevronDown className="text-sm" /> : <FaChevronRight className="text-sm" />}
+                      </button>
+                      {wishlistOpen && (
+                        <ul className="mt-1 ml-4 pl-2 border-l border-gray-600 space-y-1">
+                          {wishlistItems.map((item) => {
+                            const SubIcon = item.icon;
+                            const isActive = location.pathname === item.path;
+                            return (
+                              <li key={item.path}>
+                                <Link
+                                  to={item.path}
+                                  onClick={closeMobileNav}
+                                  className={`flex items-center space-x-3 py-2 px-3 rounded-lg transition-colors text-sm min-h-[40px] ${
+                                    isActive
+                                      ? 'bg-gradient-nex text-white'
+                                      : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
+                                  }`}
+                                >
+                                  <SubIcon className="text-lg flex-shrink-0" />
+                                  <span>{item.label}</span>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        className="flex items-center justify-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 w-full min-h-[44px]"
+                        title="Wishlist"
+                      >
+                        <FaHeart className="text-xl" />
+                      </button>
+                      <ul className="absolute left-full top-0 ml-1 hidden group-hover:block bg-gray-800 rounded-lg shadow-lg py-2 min-w-[160px] z-50">
+                        {wishlistItems.map((item) => {
+                          const SubIcon = item.icon;
+                          const isActive = location.pathname === item.path;
+                          return (
+                            <li key={item.path}>
+                              <Link
+                                to={item.path}
+                                className={`flex items-center space-x-2 py-2 px-4 hover:bg-gray-700 ${
+                                  isActive ? 'text-nex-orange' : 'text-gray-300'
+                                }`}
+                              >
+                                <SubIcon className="text-sm" />
+                                <span>{item.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
                   )}
-                </>
-              ) : (
-                <div className="relative group">
-                  <button
-                    type="button"
-                    className="flex items-center justify-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 w-full"
-                    title="Wishlist"
-                  >
-                    <FaHeart className="text-xl" />
-                  </button>
-                  <ul className="absolute left-full top-0 ml-1 hidden group-hover:block bg-gray-800 rounded-lg shadow-lg py-2 min-w-[160px] z-50">
-                    {wishlistItems.map((item) => {
-                      const SubIcon = item.icon;
-                      const isActive = location.pathname === item.path;
-                      return (
-                        <li key={item.path}>
-                          <Link
-                            to={item.path}
-                            className={`flex items-center space-x-2 py-2 px-4 hover:bg-gray-700 ${
-                              isActive ? 'text-nex-orange' : 'text-gray-300'
-                            }`}
-                          >
-                            <SubIcon className="text-sm" />
-                            <span>{item.label}</span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-            </li>
-
-            {/* Presents section with Catalog & Orders underneath */}
-            <li>
-              {sidebarOpen ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setPresentsOpen(!presentsOpen)}
-                    className={`w-full flex items-center justify-between space-x-3 p-3 rounded-lg transition-colors ${
-                      isPresentsActive ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    <span className="flex items-center space-x-3">
-                      <FaGift className="text-xl flex-shrink-0" />
-                      <span>Presents</span>
-                    </span>
-                    {presentsOpen ? <FaChevronDown className="text-sm" /> : <FaChevronRight className="text-sm" />}
-                  </button>
-                  {presentsOpen && (
-                    <ul className="mt-1 ml-4 pl-2 border-l border-gray-600 space-y-1">
-                      {presentsItems.map((item) => {
-                        const SubIcon = item.icon;
-                        const isActive = location.pathname === item.path;
-                        return (
-                          <li key={item.path}>
-                            <Link
-                              to={item.path}
-                              className={`flex items-center space-x-3 py-2 px-3 rounded-lg transition-colors text-sm ${
-                                isActive ? 'bg-gradient-nex text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
-                              }`}
-                            >
-                              <SubIcon className="text-lg flex-shrink-0" />
-                              <span>{item.label}</span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </>
-              ) : (
-                <div className="relative group">
-                  <button
-                    type="button"
-                    className="flex items-center justify-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 w-full"
-                    title="Presents"
-                  >
-                    <FaGift className="text-xl" />
-                  </button>
-                  <ul className="absolute left-full top-0 ml-1 hidden group-hover:block bg-gray-800 rounded-lg shadow-lg py-2 min-w-[180px] z-50">
-                    {presentsItems.map((item) => {
-                      const SubIcon = item.icon;
-                      const isActive = location.pathname === item.path;
-                      return (
-                        <li key={item.path}>
-                          <Link
-                            to={item.path}
-                            className={`flex items-center space-x-2 py-2 px-4 hover:bg-gray-700 ${
-                              isActive ? 'text-nex-orange' : 'text-gray-300'
-                            }`}
-                          >
-                            <SubIcon className="text-sm" />
-                            <span>{item.label}</span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-            </li>
-            </>
-            )}
-
-            {fullCrm && bottomMenuItems.filter((item) => item.permission()).map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                      isActive ? 'bg-gradient-nex text-white' : 'text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    <Icon className="text-xl flex-shrink-0" />
-                    {sidebarOpen && <span>{item.label}</span>}
-                  </Link>
                 </li>
-              );
-            })}
+
+                <li>
+                  {showNavLabels ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPresentsOpen(!presentsOpen)}
+                        className={`w-full flex items-center justify-between space-x-3 p-3 rounded-lg transition-colors min-h-[44px] ${
+                          isPresentsActive ? 'bg-gray-800 text-white' : 'text-gray-300 hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="flex items-center space-x-3">
+                          <FaGift className="text-xl flex-shrink-0" />
+                          <span>Presents</span>
+                        </span>
+                        {presentsOpen ? <FaChevronDown className="text-sm" /> : <FaChevronRight className="text-sm" />}
+                      </button>
+                      {presentsOpen && (
+                        <ul className="mt-1 ml-4 pl-2 border-l border-gray-600 space-y-1">
+                          {presentsItems.map((item) => {
+                            const SubIcon = item.icon;
+                            const isActive = location.pathname === item.path;
+                            return (
+                              <li key={item.path}>
+                                <Link
+                                  to={item.path}
+                                  onClick={closeMobileNav}
+                                  className={`flex items-center space-x-3 py-2 px-3 rounded-lg transition-colors text-sm min-h-[40px] ${
+                                    isActive
+                                      ? 'bg-gradient-nex text-white'
+                                      : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
+                                  }`}
+                                >
+                                  <SubIcon className="text-lg flex-shrink-0" />
+                                  <span>{item.label}</span>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        className="flex items-center justify-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 w-full min-h-[44px]"
+                        title="Presents"
+                      >
+                        <FaGift className="text-xl" />
+                      </button>
+                      <ul className="absolute left-full top-0 ml-1 hidden group-hover:block bg-gray-800 rounded-lg shadow-lg py-2 min-w-[180px] z-50">
+                        {presentsItems.map((item) => {
+                          const SubIcon = item.icon;
+                          const isActive = location.pathname === item.path;
+                          return (
+                            <li key={item.path}>
+                              <Link
+                                to={item.path}
+                                className={`flex items-center space-x-2 py-2 px-4 hover:bg-gray-700 ${
+                                  isActive ? 'text-nex-orange' : 'text-gray-300'
+                                }`}
+                              >
+                                <SubIcon className="text-sm" />
+                                <span>{item.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </li>
+              </>
+            )}
+
+            {fullCrm &&
+              bottomMenuItems
+                .filter((item) => item.permission())
+                .map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <li key={item.path}>
+                      <Link to={item.path} onClick={closeMobileNav} className={navLinkClass(isActive)}>
+                        <Icon className="text-xl flex-shrink-0" />
+                        {showNavLabels && <span>{item.label}</span>}
+                      </Link>
+                    </li>
+                  );
+                })}
           </ul>
         </nav>
 
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-3 sm:p-4 border-t border-gray-700">
           <button
+            type="button"
             onClick={handleLogout}
-            className="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors"
+            className="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors min-h-[44px]"
           >
             <FaSignOutAlt />
-            {sidebarOpen && <span>Logout</span>}
+            {showNavLabels && <span>Logout</span>}
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              {currentHeaderLabel}
-            </h2>
-            <div className="flex items-center space-x-4">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 w-full">
+        <header className="bg-white shadow-sm border-b border-gray-200 px-3 py-3 sm:px-4 sm:py-4 shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <button
+                type="button"
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0"
+                aria-label="Open menu"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <FaBars className="text-lg" />
+              </button>
+              <h2 className="text-lg sm:text-2xl font-semibold text-gray-800 truncate">
+                {currentHeaderLabel}
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <CrmNotifications />
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-nex rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-nex rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-white font-semibold text-sm">
                     {admin?.email?.charAt(0).toUpperCase() || 'A'}
                   </span>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-800">{admin?.email || 'Admin'}</p>
-                  <p className="text-xs text-gray-500 capitalize">
-                  {admin?.userType === 'superadmin'
-                    ? 'Super Administrator'
-                    : admin?.userType === 'admin'
-                      ? 'Administrator'
-                      : admin?.userType === 'viewer'
-                        ? 'Viewer'
-                        : admin?.userType === 'crm_streamer'
-                          ? 'Streamer (CRM)'
-                          : 'Administrator'}
+                <div className="text-right hidden sm:block max-w-[160px] md:max-w-none">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{admin?.email || 'Admin'}</p>
+                  <p className="text-xs text-gray-500 capitalize truncate">
+                    {admin?.userType === 'superadmin'
+                      ? 'Super Administrator'
+                      : admin?.userType === 'admin'
+                        ? 'Administrator'
+                        : admin?.userType === 'viewer'
+                          ? 'Viewer'
+                          : admin?.userType === 'crm_streamer'
+                            ? 'Streamer (CRM)'
+                            : 'Administrator'}
                   </p>
                 </div>
               </div>
@@ -514,7 +563,7 @@ const AdminLayout = ({ children }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

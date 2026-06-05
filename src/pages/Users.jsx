@@ -201,6 +201,8 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
       if (createdTo) params.set('createdTo', createdTo);
       if (streamerOnly) {
         params.set('filter', 'all');
+        params.set('registrationComplete', '1');
+        params.set('organicOnly', '1');
       }
       const response = await axios.get(`/api/admin/users?${params.toString()}`);
       setUsers(response.data.users || []);
@@ -554,64 +556,66 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
 
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">New users</h2>
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <div className="relative flex-1 min-w-[200px]">
+        <div className="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200">
+          <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-4 md:mb-6">New users</h2>
+          <div className="flex flex-col gap-3 mb-4 md:mb-6 md:flex-row md:flex-wrap md:items-center">
+            <div className="relative w-full md:flex-1 md:min-w-[200px]">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-nex-orange"
+                className="w-full h-11 md:h-10 pl-10 pr-4 border border-gray-300 rounded-md text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-nex-orange"
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
-              <span className="font-medium">From</span>
-              <input
-                type="date"
-                value={createdFrom}
-                max={createdTo || maxToDate}
-                onChange={(e) => handleStreamerFromChange(e.target.value)}
-                className="h-10 px-3 border border-gray-300 rounded-md text-sm"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
-              <span className="font-medium">To</span>
-              <input
-                type="date"
-                value={createdTo}
-                min={createdFrom || undefined}
-                max={maxToDate}
-                onChange={(e) => handleStreamerToChange(e.target.value)}
-                className="h-10 px-3 border border-gray-300 rounded-md text-sm"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
-              <span className="font-medium">Gender</span>
-              <select
-                value={genderFilter}
-                onChange={(e) => setGenderFilter(e.target.value)}
-                className="h-10 px-3 border border-gray-300 rounded-md text-sm bg-white"
-              >
-                <option value="all">All</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-            </label>
+            <div className="grid grid-cols-[1fr_1fr_4.75rem] gap-2 w-full md:flex md:flex-wrap md:items-center md:gap-3 md:w-auto">
+              <label className="flex flex-col gap-1 min-w-0 text-sm text-gray-600 md:flex-row md:items-center md:gap-2 md:shrink-0">
+                <span className="font-medium text-xs md:text-sm">From</span>
+                <input
+                  type="date"
+                  value={createdFrom}
+                  max={createdTo || maxToDate}
+                  onChange={(e) => handleStreamerFromChange(e.target.value)}
+                  className="w-full min-w-0 h-10 px-1.5 md:px-2 border border-gray-300 rounded-md text-xs md:text-sm"
+                />
+              </label>
+              <label className="flex flex-col gap-1 min-w-0 text-sm text-gray-600 md:flex-row md:items-center md:gap-2 md:shrink-0">
+                <span className="font-medium text-xs md:text-sm">To</span>
+                <input
+                  type="date"
+                  value={createdTo}
+                  min={createdFrom || undefined}
+                  max={maxToDate}
+                  onChange={(e) => handleStreamerToChange(e.target.value)}
+                  className="w-full min-w-0 h-10 px-1.5 md:px-2 border border-gray-300 rounded-md text-xs md:text-sm"
+                />
+              </label>
+              <label className="flex flex-col gap-1 min-w-0 max-w-[4.75rem] md:max-w-none text-sm text-gray-600 md:flex-row md:items-center md:gap-2 md:shrink-0">
+                <span className="font-medium text-xs md:text-sm">Gender</span>
+                <select
+                  value={genderFilter}
+                  onChange={(e) => setGenderFilter(e.target.value)}
+                  className="w-full min-w-0 max-w-[4.75rem] md:max-w-none h-10 px-1 md:px-2 pr-5 border border-gray-300 rounded-md text-xs md:text-sm bg-white"
+                >
+                  <option value="all">All</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </label>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+            <table className="w-full min-w-[280px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Gender
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Profile created
                   </th>
                 </tr>
@@ -619,14 +623,14 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {streamerFilteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-3 py-3 md:px-6 md:py-4 text-sm font-medium text-gray-900 whitespace-normal md:whitespace-nowrap">
                       {getProfileName(user)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-3 py-3 md:px-6 md:py-4 whitespace-nowrap text-sm text-gray-600">
                       {formatProfileGender(user.profile)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatProfileCreated(user.createdAt)}
+                    <td className="px-3 py-3 md:px-6 md:py-4 text-sm text-gray-600 whitespace-normal md:whitespace-nowrap">
+                      {formatProfileCreated(user.updatedAt || user.createdAt)}
                     </td>
                   </tr>
                 ))}
@@ -1109,7 +1113,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     First Name *
@@ -1135,7 +1139,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Age *
@@ -1253,7 +1257,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First name</label>
                   <input
@@ -1274,7 +1278,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
                   <input
@@ -1307,7 +1311,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
                   placeholder="Short bio"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                   <input
