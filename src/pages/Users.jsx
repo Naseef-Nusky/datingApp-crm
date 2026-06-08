@@ -21,6 +21,12 @@ import {
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../../components/PasswordInput';
 import ImageCropEditor from '../components/ImageCropEditor';
+import {
+  PROFILE_IMAGE_ACCEPT,
+  PROFILE_IMAGE_HINT,
+  isAllowedProfileImageFile,
+  prepareProfileImageForUpload,
+} from '../utils/profileImage';
 
 const formatDateInput = (date) => {
   const y = date.getFullYear();
@@ -338,17 +344,23 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
     setShowEditModal(true);
   };
 
-  const handleEditPhotoSelect = (e) => {
+  const handleEditPhotoSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+    if (!isAllowedProfileImageFile(file)) {
+      alert(`Please select a supported image (${PROFILE_IMAGE_HINT})`);
       return;
     }
-    setPhotoCropSource((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
-    });
+    try {
+      const ready = await prepareProfileImageForUpload(file);
+      setPhotoCropSource((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(ready);
+      });
+    } catch (err) {
+      console.error('Photo prepare error:', err);
+      alert('Could not open this photo. Try JPG or PNG, or take a new photo.');
+    }
     e.target.value = '';
   };
 
@@ -1238,11 +1250,12 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
                         {pendingEditPhoto ? 'Change photo again' : 'Upload & crop photo'}
                         <input
                           type="file"
-                          accept="image/*"
+                          accept={PROFILE_IMAGE_ACCEPT}
                           className="hidden"
                           onChange={handleEditPhotoSelect}
                         />
                       </label>
+                      <p className="text-xs text-gray-500">Supported: {PROFILE_IMAGE_HINT}</p>
                       {pendingEditPhoto && (
                         <button
                           type="button"

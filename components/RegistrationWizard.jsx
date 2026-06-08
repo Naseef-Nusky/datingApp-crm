@@ -5,6 +5,12 @@ import axios from 'axios';
 import RegistrationSuccessModal from './RegistrationSuccessModal';
 import PasswordInput from './PasswordInput';
 import ImageCropEditor from '../src/components/ImageCropEditor';
+import {
+  PROFILE_IMAGE_ACCEPT,
+  PROFILE_IMAGE_HINT,
+  isAllowedProfileImageFile,
+  prepareProfileImageForUpload,
+} from '../src/utils/profileImage';
 
 /** Clear gap between male/female icons (inline style — reliable in all CRM layouts). */
 const GENDER_ICON_GAP = '3.5rem';
@@ -195,17 +201,23 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     }));
   };
 
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+    if (!isAllowedProfileImageFile(file)) {
+      alert(`Please select a supported image (${PROFILE_IMAGE_HINT})`);
       return;
     }
-    setPhotoCropSource((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
-    });
+    try {
+      const ready = await prepareProfileImageForUpload(file);
+      setPhotoCropSource((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(ready);
+      });
+    } catch (err) {
+      console.error('Photo prepare error:', err);
+      alert('Could not open this photo. Try JPG or PNG, or take a new photo.');
+    }
     e.target.value = '';
   };
 
@@ -242,11 +254,13 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     return null;
   };
 
+  const crmAccountTypeForRole = (userRole) => (userRole === 'streamer' ? 'streamer' : 'member');
+
   const checkEmailExists = async (email) => {
     if (!email || !email.includes('@')) {
-      return false; // Invalid email format, let validation handle it
+      return false;
     }
-    
+
     try {
       setCheckingEmail(true);
       setEmailError('');
@@ -256,11 +270,44 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
       return response.data.exists;
     } catch (error) {
       console.error('Email check error:', error);
-      // If there's an error, don't block the user - let backend handle it during registration
       return false;
     } finally {
       setCheckingEmail(false);
     }
+  };
+
+  /** CRM create: role-aware check (same email allowed across different account types). */
+  const checkCrmEmailTaken = async (email, userRole = 'user') => {
+    if (!email || !email.includes('@')) {
+      return null;
+    }
+
+    try {
+      setCheckingEmail(true);
+      const response = await axios.post('/api/admin/check-email', {
+        email: email.trim(),
+        accountType: crmAccountTypeForRole(userRole),
+      });
+      if (response.data.exists) {
+        return response.data.message || 'This email is already registered. Please use a different email.';
+      }
+      return null;
+    } catch (error) {
+      console.error('CRM email check error:', error);
+      return null;
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  const validateCrmEmailField = async (email, userRole = 'user') => {
+    const takenMessage = await checkCrmEmailTaken(email, userRole);
+    if (takenMessage) {
+      setEmailError(takenMessage);
+      return false;
+    }
+    setEmailError('');
+    return true;
   };
 
   const validateStep = async (step) => {
@@ -290,11 +337,8 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
             return false;
           }
           const emailTrimmed = formData.email.trim();
-          const emailTaken = await checkEmailExists(emailTrimmed);
-          if (emailTaken) {
-            setEmailError(
-              'This email is already in use (another account or a pending signup). Use a different email or delete the existing user first.'
-            );
+          const emailOk = await validateCrmEmailField(emailTrimmed, formData.userRole || 'user');
+          if (!emailOk) {
             return false;
           }
           if (formData.password) {
@@ -386,6 +430,13 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
 
         if (role !== 'admin' && !formData.photo) {
           setError('Please upload a profile photo before registering.');
+          return;
+        }
+
+        const emailTakenMsg = await checkCrmEmailTaken(email, role);
+        if (emailTakenMsg) {
+          setEmailError(emailTakenMsg);
+          setError(emailTakenMsg);
           return;
         }
 
@@ -601,7 +652,13 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                   <label className="block text-gray-700 mb-2">User role</label>
                   <select
                     value={formData.userRole || 'user'}
-                    onChange={(e) => handleChange('userRole', e.target.value)}
+                    onChange={(e) => {
+                      handleChange('userRole', e.target.value);
+                      setEmailError('');
+                      if (formData.email?.includes('@')) {
+                        validateCrmEmailField(formData.email.trim(), e.target.value);
+                      }
+                    }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   >
                     <option value="user">Real users</option>
@@ -614,10 +671,19 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                     type="email"
                     value={formData.email}
                     onChange={(e) => { handleChange('email', e.target.value); setEmailError(''); }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim();
+                      if (value.includes('@')) {
+                        validateCrmEmailField(value, formData.userRole || 'user');
+                      }
+                    }}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${emailError ? 'border-red-500' : 'border-gray-300'}`}
                     placeholder="Enter email"
                   />
                   {emailError && <p className="mt-2 text-sm text-red-600">{emailError}</p>}
+                  {checkingEmail && (
+                    <p className="mt-2 text-sm text-gray-500">Checking if email is available...</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-gray-700 mb-2">Password (optional)</label>
@@ -814,7 +880,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                       />
                       <input
                         type="file"
-                        accept="image/*"
+                        accept={PROFILE_IMAGE_ACCEPT}
                         onChange={handlePhotoChange}
                         className="hidden"
                         id="photo-upload"
@@ -825,6 +891,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                       >
                         UPLOAD PROFILE PHOTO
                       </label>
+                      <p className="text-xs text-gray-500 mt-2">Supported: {PROFILE_IMAGE_HINT}</p>
                     </div>
                   )}
                   {formData.photo && (
@@ -843,7 +910,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                         CHANGE PHOTO
                         <input
                           type="file"
-                          accept="image/*"
+                          accept={PROFILE_IMAGE_ACCEPT}
                           onChange={handlePhotoChange}
                           className="hidden"
                           id="photo-upload-replace"
