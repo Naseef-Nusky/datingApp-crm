@@ -80,6 +80,7 @@ export const AuthProvider = ({ children }) => {
   const canDeleteAdminUsers = () => isSuperAdmin();
   const canViewUsers = () => isSuperAdmin() || isViewer() || isCrmStreamerStaff();
   const canCreateUsers = () => isSuperAdmin() || isViewer();
+  const canDeleteUsers = () => isSuperAdmin() || isViewer();
   const canEditUsers = () => isSuperAdmin();
   const canToggleUserVerification = () => isSuperAdmin() || isViewer();
   const canManageContent = () => isSuperAdmin() || isAdmin();
@@ -103,6 +104,7 @@ export const AuthProvider = ({ children }) => {
         canDeleteAdminUsers,
         canViewUsers,
         canCreateUsers,
+        canDeleteUsers,
         canEditUsers,
         canToggleUserVerification,
         canManageContent,

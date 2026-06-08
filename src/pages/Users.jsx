@@ -50,6 +50,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
   const {
     canViewUsers,
     canEditUsers,
+    canDeleteUsers,
     canCreateUsers,
     canToggleUserVerification,
     isAdmin,
@@ -504,7 +505,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
   };
 
   const handleDeleteSelected = async () => {
-    if (!canEditUsers()) return;
+    if (!canDeleteUsers()) return;
     const ids = selectedUserIds.filter((id) =>
       filteredUsers.some((u) => u.id === id)
     );
@@ -786,7 +787,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
           />
         </div>
 
-        {canEditUsers() &&
+        {canDeleteUsers() &&
           filteredUsers.filter((u) => selectedUserIds.includes(u.id)).length > 0 && (
             <div className="flex flex-wrap items-center gap-3 mb-4 p-3 rounded-lg bg-red-50 border border-red-100">
               <span className="text-sm font-medium text-red-900">
@@ -1039,15 +1040,17 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
                             <span>Edit</span>
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50"
-                          title="Permanently delete user and profile"
-                        >
-                          <FaTrash className="flex-shrink-0" />
-                          <span>Remove</span>
-                        </button>
+                        {canDeleteUsers() && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50"
+                            title="Permanently delete user and all related data"
+                          >
+                            <FaTrash className="flex-shrink-0" />
+                            <span>Remove</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => handleSetOnline(user.id, !user.profile?.isOnline)}
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.profile?.isOnline ? 'text-green-600 hover:text-green-900 hover:bg-green-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
