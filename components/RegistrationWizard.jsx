@@ -12,6 +12,9 @@ import {
   prepareProfileImageForUpload,
 } from '../src/utils/profileImage';
 
+const REQUIRED_GALLERY_PHOTOS = 2;
+const PHOTO_SLOT_COUNT = 1 + REQUIRED_GALLERY_PHOTOS; // profile + 2 gallery
+
 /** Clear gap between male/female icons (inline style — reliable in all CRM layouts). */
 const GENDER_ICON_GAP = '3.5rem';
 
@@ -63,6 +66,8 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registeredUser, setRegisteredUser] = useState(null);
   const [photoCropSource, setPhotoCropSource] = useState(null);
+  const [photoCropTarget, setPhotoCropTarget] = useState(null);
+  const [existingPhotos, setExistingPhotos] = useState({ profile: null, gallery: [] });
   /** Prevents double REGISTER (e.g. double-click) from calling the create API twice. */
   const createSubmitLockRef = useRef(false);
 
@@ -86,8 +91,8 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     idealPartner: '',
     // Step 4: Interests
     interests: [],
-    // Step 5: Photo
-    photo: null,
+    // Step 5: [profile, gallery1, gallery2]
+    photos: Array(PHOTO_SLOT_COUNT).fill(null),
   });
 
   const interests = [
@@ -168,6 +173,12 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
       idealPartner: (prefs.description != null ? prefs.description : prev.idealPartner) || '',
       interests: Array.isArray(initialProfile.interests) ? initialProfile.interests : prev.interests,
     }));
+
+    const serverPhotos = Array.isArray(initialProfile.photos) ? initialProfile.photos : [];
+    const toUrl = (p) => (typeof p === 'string' ? p : p?.url || null);
+    const profileUrl = serverPhotos.length > 0 ? toUrl(serverPhotos[0]) : null;
+    const galleryUrls = serverPhotos.slice(1).map(toUrl).filter(Boolean);
+    setExistingPhotos({ profile: profileUrl, gallery: galleryUrls });
   }, [completeProfileOnly, initialProfile]);
 
   // Auto-detect city/country for hometown when step 1 is shown
@@ -201,7 +212,45 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     }));
   };
 
-  const handlePhotoChange = async (e) => {
+  const photosRequiredForRole = () =>
+    !(crmCreateUser && formData.userRole === 'admin');
+
+  const registrationPhotosComplete = () => {
+    if (!photosRequiredForRole()) return true;
+    const newProfile = formData.photos?.[0];
+    const newGallery = (formData.photos || []).slice(1).filter(Boolean);
+    const hasProfile = Boolean(existingPhotos.profile) || Boolean(newProfile);
+    const galleryCount = existingPhotos.gallery.length + newGallery.length;
+    return hasProfile && galleryCount >= REQUIRED_GALLERY_PHOTOS;
+  };
+
+  const uploadRegistrationPhotos = async (photos) => {
+    const profileFile = photos?.[0];
+    const galleryFiles = (photos || []).slice(1).filter(Boolean);
+
+    if (profileFile) {
+      const profileFormData = new FormData();
+      profileFormData.append('photo', profileFile);
+      await axios.post('/api/profiles/me/photos', profileFormData);
+    }
+
+    for (const file of galleryFiles) {
+      const galleryFormData = new FormData();
+      galleryFormData.append('photo', file);
+      await axios.post('/api/profiles/me/photos/add', galleryFormData);
+    }
+  };
+
+  const uploadCrmUserGalleryPhotos = async (userId, photos) => {
+    const galleryFiles = (photos || []).slice(1).filter(Boolean);
+    for (const file of galleryFiles) {
+      const galleryFormData = new FormData();
+      galleryFormData.append('photo', file);
+      await axios.post(`/api/admin/profiles/${userId}/photos/add`, galleryFormData);
+    }
+  };
+
+  const handlePhotoChange = async (e, photoIndex) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!isAllowedProfileImageFile(file)) {
@@ -210,6 +259,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     }
     try {
       const ready = await prepareProfileImageForUpload(file);
+      setPhotoCropTarget(photoIndex);
       setPhotoCropSource((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return URL.createObjectURL(ready);
@@ -222,17 +272,36 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
   };
 
   const handlePhotoCropConfirm = (file) => {
+    const targetIndex = photoCropTarget;
     setPhotoCropSource((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
-    setFormData((prev) => ({ ...prev, photo: file }));
+    setPhotoCropTarget(null);
+    if (targetIndex === null || targetIndex === undefined) return;
+    setFormData((prev) => {
+      const photos = [...(prev.photos || Array(PHOTO_SLOT_COUNT).fill(null))];
+      photos[targetIndex] = file;
+      return { ...prev, photos };
+    });
+    if (targetIndex === 0) {
+      setExistingPhotos((prev) => ({ ...prev, profile: null }));
+    }
   };
 
   const handlePhotoCropCancel = () => {
     setPhotoCropSource((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
+    });
+    setPhotoCropTarget(null);
+  };
+
+  const removeRegistrationPhoto = (photoIndex) => {
+    setFormData((prev) => {
+      const photos = [...(prev.photos || Array(PHOTO_SLOT_COUNT).fill(null))];
+      photos[photoIndex] = null;
+      return { ...prev, photos };
     });
   };
 
@@ -376,7 +445,11 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         // Interests are optional
         return true;
       case 5:
-        return !!formData.photo;
+        if (!registrationPhotosComplete()) {
+          setError('Please add your profile photo and 2 gallery photos to continue');
+          return false;
+        }
+        return true;
       default:
         return true;
     }
@@ -428,8 +501,8 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         const password = (formData.password && formData.password.trim()) ? formData.password.trim() : null;
         const role = formData.userRole || 'user';
 
-        if (role !== 'admin' && !formData.photo) {
-          setError('Please upload a profile photo before registering.');
+        if (role !== 'admin' && !registrationPhotosComplete()) {
+          setError('Please add your profile photo and 2 gallery photos before registering.');
           return;
         }
 
@@ -468,8 +541,12 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           fd.append('idealPartner', payload.idealPartner);
           fd.append('interests', JSON.stringify(payload.interests));
           if (password) fd.append('password', password);
-          fd.append('photo', formData.photo);
+          fd.append('photo', formData.photos[0]);
           response = await axios.post('/api/admin/streamers/with-photo', fd);
+          const streamerId = response.data?.user?.id;
+          if (streamerId) {
+            await uploadCrmUserGalleryPhotos(streamerId, formData.photos);
+          }
         } else if (role === 'admin') {
           const adminPayload = {
             email,
@@ -492,8 +569,12 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           fd.append('idealPartner', payload.idealPartner);
           fd.append('interests', JSON.stringify(payload.interests));
           if (password) fd.append('password', password);
-          fd.append('photo', formData.photo);
+          fd.append('photo', formData.photos[0]);
           response = await axios.post('/api/admin/users/with-photo', fd);
+          const memberId = response.data?.user?.id;
+          if (memberId) {
+            await uploadCrmUserGalleryPhotos(memberId, formData.photos);
+          }
         }
 
         setRegisteredUser({
@@ -523,10 +604,8 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           },
         };
         await axios.put('/api/profiles/me', profilePayload);
-        if (formData.photo) {
-          const photoFormData = new FormData();
-          photoFormData.append('photo', formData.photo);
-          await axios.post('/api/profiles/me/photos', photoFormData);
+        if (registrationPhotosComplete()) {
+          await uploadRegistrationPhotos(formData.photos);
         }
         await axios.put('/api/auth/me/registration-complete');
         if (onComplete) onComplete();
@@ -557,11 +636,9 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
 
       if (result.success) {
         const apiUrl = import.meta.env.VITE_API_URL || '';
-        if (formData.photo) {
-          const photoFormData = new FormData();
-          photoFormData.append('photo', formData.photo);
+        if (registrationPhotosComplete()) {
           try {
-            await axios.post(`${apiUrl}/api/profiles/me/photos`, photoFormData);
+            await uploadRegistrationPhotos(formData.photos);
           } catch (photoError) {
             console.error('Photo upload error:', photoError);
           }
@@ -851,10 +928,90 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           </div>
         );
 
-      case 5:
+      case 5: {
+        if (crmCreateUser && formData.userRole === 'admin') {
+          return (
+            <div className="space-y-6 text-center">
+              <h2 className="text-3xl font-bold mb-2">Admin account</h2>
+              <p className="text-sm text-gray-600">No photos required for CRM admin accounts.</p>
+            </div>
+          );
+        }
+
+        const renderPhotoSlot = (slotIndex, label, previewUrl, isExisting = false) => {
+          const photo = formData.photos?.[slotIndex];
+          const inputId = `photo-upload-${slotIndex}`;
+          const displaySrc = photo ? URL.createObjectURL(photo) : previewUrl;
+
+          return (
+            <div className="flex flex-col items-center">
+              <p className="text-sm font-semibold text-gray-900 mb-2">{label}</p>
+              <div className="relative w-full max-w-[220px] aspect-square">
+                <input
+                  type="file"
+                  accept={PROFILE_IMAGE_ACCEPT}
+                  onChange={(e) => handlePhotoChange(e, slotIndex)}
+                  className="hidden"
+                  id={inputId}
+                />
+                <label
+                  htmlFor={inputId}
+                  className="w-full h-full bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center relative cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition overflow-hidden"
+                >
+                  {displaySrc ? (
+                    <img
+                      src={displaySrc}
+                      alt={label}
+                      className="w-full h-full object-cover rounded-lg pointer-events-none"
+                    />
+                  ) : (
+                    <div className="text-center flex flex-col items-center px-3 pointer-events-none">
+                      <img
+                        src="/profile.png"
+                        alt="Photo placeholder"
+                        className="w-20 h-20 object-cover rounded-full mb-3 opacity-70"
+                      />
+                      <span className="text-black font-semibold text-xs sm:text-sm">
+                        UPLOAD PHOTO
+                      </span>
+                    </div>
+                  )}
+                  {displaySrc && (
+                    <span className="absolute bottom-2 left-2 right-2 bg-white bg-opacity-95 text-black text-xs font-semibold py-2 text-center rounded border border-gray-300 pointer-events-none">
+                      TAP TO CHANGE PHOTO
+                    </span>
+                  )}
+                </label>
+                {isExisting && !photo && displaySrc && (
+                  <span className="absolute top-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded pointer-events-none">
+                    ADDED
+                  </span>
+                )}
+                {photo && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeRegistrationPhoto(slotIndex);
+                    }}
+                    className="absolute top-2 right-2 z-10 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                    aria-label={`Remove ${label}`}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        };
+
         return (
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-center mb-6">Add photo. Get noticed.</h2>
+            <h2 className="text-3xl font-bold text-center mb-2">Add your photos</h2>
+            <p className="text-center text-sm text-gray-900 mb-6">
+              1 profile photo{existingPhotos.profile ? ' (already on profile)' : ''} and 2 gallery photos required.
+            </p>
             {photoCropSource ? (
               <ImageCropEditor
                 imageSrc={photoCropSource}
@@ -863,66 +1020,39 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                 onCancel={handlePhotoCropCancel}
               />
             ) : (
-              <div className="flex justify-center">
-                <div className="w-64 h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center relative">
-                  {formData.photo ? (
-                    <img
-                      src={URL.createObjectURL(formData.photo)}
-                      alt="Preview"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="text-center flex flex-col items-center">
-                      <img
-                        src="/profile.png"
-                        alt="Profile placeholder"
-                        className={`${crmCreateUser ? 'w-20 h-20' : 'w-32 h-32'} object-cover rounded-full mb-4`}
-                      />
-                      <input
-                        type="file"
-                        accept={PROFILE_IMAGE_ACCEPT}
-                        onChange={handlePhotoChange}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <label
-                        htmlFor="photo-upload"
-                        className="bg-gray-700 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-gray-800 transition"
-                      >
-                        UPLOAD PROFILE PHOTO
-                      </label>
-                      <p className="text-xs text-gray-500 mt-2">Supported: {PROFILE_IMAGE_HINT}</p>
-                    </div>
+              <div className="space-y-8">
+                <div className="flex justify-center">
+                  {renderPhotoSlot(
+                    0,
+                    'Profile photo',
+                    existingPhotos.profile,
+                    Boolean(existingPhotos.profile)
                   )}
-                  {formData.photo && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setFormData((prev) => ({ ...prev, photo: null }))}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                      <label
-                        htmlFor="photo-upload-replace"
-                        className="absolute bottom-2 left-2 right-2 bg-gray-800 bg-opacity-90 text-white text-xs py-2 text-center rounded cursor-pointer hover:bg-opacity-100"
-                      >
-                        CHANGE PHOTO
-                        <input
-                          type="file"
-                          accept={PROFILE_IMAGE_ACCEPT}
-                          onChange={handlePhotoChange}
-                          className="hidden"
-                          id="photo-upload-replace"
-                        />
-                      </label>
-                    </>
-                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {Array.from({ length: REQUIRED_GALLERY_PHOTOS }, (_, galleryIndex) => {
+                    const slotIndex = galleryIndex + 1;
+                    const existingUrl = existingPhotos.gallery[galleryIndex] || null;
+                    return (
+                      <div key={slotIndex}>
+                        {renderPhotoSlot(
+                          slotIndex,
+                          `Gallery photo ${galleryIndex + 1}`,
+                          existingUrl,
+                          Boolean(existingUrl)
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
+            {!photoCropSource && (
+              <p className="text-xs text-gray-900 text-center">Supported: {PROFILE_IMAGE_HINT}</p>
+            )}
           </div>
         );
+      }
 
       default:
         return null;
@@ -995,9 +1125,11 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                 type="button"
                 onClick={handleNext}
                 className={`min-h-[48px] min-w-[120px] px-6 py-3 sm:px-12 rounded-lg font-semibold text-white transition bg-gradient-nex hover:opacity-90 active:opacity-95 shadow-md cursor-pointer touch-manipulation select-none ${
-                  loading || checkingEmail || (currentStep === 5 && !formData.photo) ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+                  loading || checkingEmail || (currentStep === 5 && !registrationPhotosComplete())
+                    ? 'opacity-50 cursor-not-allowed pointer-events-none'
+                    : ''
                 }`}
-                disabled={loading || checkingEmail || (currentStep === 5 && !formData.photo)}
+                disabled={loading || checkingEmail || (currentStep === 5 && !registrationPhotosComplete())}
               >
                 {loading
                   ? (completeProfileOnly ? 'Saving...' : 'Registering...')
