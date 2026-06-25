@@ -50,6 +50,7 @@ function App() {
                     <Route path="/users/new" element={<Users defaultTypeFilter="real" newUsersOnly />} />
                     <Route path="/users" element={<Users defaultTypeFilter="real" />} />
                     <Route path="/streamers" element={<Users defaultTypeFilter="streamers" />} />
+                    <Route path="/users/dummy" element={<Users defaultTypeFilter="real" dummyUsersOnly />} />
                     <Route path="/users/create" element={<RegistrationWizard crmCreateUser onSuccessRedirectTo="/users" />} />
                     <Route path="/admin-users" element={<AdminUsers />} />
                     <Route path="/wishlist-categories" element={<WishlistCategories />} />

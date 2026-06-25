@@ -21,6 +21,7 @@ import {
   FaCreditCard,
   FaClock,
   FaUserPlus,
+  FaUserSecret,
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import CrmNotifications from './CrmNotifications';
@@ -69,6 +70,7 @@ const AdminLayout = ({ children }) => {
     : fullCrm &&
       (location.pathname === '/users' ||
         location.pathname === '/streamers' ||
+        location.pathname === '/users/dummy' ||
         location.pathname === '/users/create');
   const isNewUsersActive = location.pathname === '/users/new';
   const isWishlistActive =
@@ -85,6 +87,7 @@ const AdminLayout = ({ children }) => {
     ? [
         { path: '/users', icon: FaUsers, label: 'Real users' },
         { path: '/streamers', icon: FaVideo, label: 'Streamers' },
+        { path: '/users/dummy', icon: FaUserSecret, label: 'Dummy users' },
         { path: '/users/create', icon: FaPlus, label: 'Create user' },
       ]
     : [];

@@ -45,7 +45,7 @@ const getPresetDateRange = (days = 7) => {
   return { from: formatDateInput(from), to: formatDateInput(to) };
 };
 
-const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
+const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false }) => {
   const navigate = useNavigate();
   const {
     canViewUsers,
@@ -178,6 +178,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
     createdFrom,
     createdTo,
     newUsersOnly,
+    dummyUsersOnly,
     streamerOnly,
     streamerRangeReady,
     authLoading,
@@ -185,7 +186,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
 
   useEffect(() => {
     setSelectedUserIds([]);
-  }, [filter, typeFilter, genderFilter, createdFrom, createdTo, newUsersOnly]);
+  }, [filter, typeFilter, genderFilter, createdFrom, createdTo, newUsersOnly, dummyUsersOnly]);
 
   useEffect(() => {
     if (defaultTypeFilter && defaultTypeFilter !== typeFilter) setTypeFilter(defaultTypeFilter);
@@ -195,10 +196,16 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ filter });
-      const effectiveType = streamerOnly || newUsersOnly ? 'real' : typeFilter;
+      const effectiveType = dummyUsersOnly
+        ? 'real'
+        : streamerOnly || newUsersOnly
+          ? 'real'
+          : typeFilter;
       if (effectiveType && effectiveType !== 'all') params.set('type', effectiveType);
       if (genderFilter && genderFilter !== 'all') params.set('gender', genderFilter);
-      if (streamerOnly || effectiveType === 'real') {
+      if (dummyUsersOnly) {
+        params.set('dummyOnly', '1');
+      } else if (streamerOnly || effectiveType === 'real') {
         params.set('excludeDummy', '1');
       }
       if (newUsersOnly && !streamerOnly) {
@@ -206,7 +213,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
       }
       if (createdFrom) params.set('createdFrom', createdFrom);
       if (createdTo) params.set('createdTo', createdTo);
-      if (effectiveType === 'real') {
+      if (effectiveType === 'real' && !dummyUsersOnly) {
         params.set('registrationComplete', '1');
       }
       if (streamerOnly) {
@@ -671,7 +678,15 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false }) => {
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">
-            {newUsersOnly ? 'New users (last 7 days)' : 'User Management'}
+            {dummyUsersOnly
+              ? 'Dummy users'
+              : newUsersOnly
+                ? 'New users (last 7 days)'
+                : defaultTypeFilter === 'streamers'
+                  ? 'Streamers'
+                  : defaultTypeFilter === 'real'
+                    ? 'Real users'
+                    : 'User Management'}
           </h2>
           <div className="flex gap-2 items-center md:ml-auto">
             {!defaultTypeFilter && !streamerOnly && (
