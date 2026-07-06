@@ -76,13 +76,23 @@ export const AuthProvider = ({ children }) => {
   const isViewer = () => admin?.userType === 'viewer';
   const isCrmStreamerStaff = () => admin?.userType === 'crm_streamer';
 
+  /** User list actions: Super Admin + Admin only (Viewer is read-only). */
+  const canManageUserActions = () => isSuperAdmin() || isAdmin();
+
   const canCreateAdminUsers = () => isSuperAdmin();
   const canDeleteAdminUsers = () => isSuperAdmin();
-  const canViewUsers = () => isSuperAdmin() || isViewer() || isCrmStreamerStaff();
+<<<<<<< HEAD
+  const canViewUsers = () => isSuperAdmin() || isAdmin() || isViewer() || isCrmStreamerStaff();
   const canCreateUsers = () => isSuperAdmin() || isViewer();
-  const canDeleteUsers = () => isSuperAdmin() || isViewer();
-  const canEditUsers = () => isSuperAdmin();
-  const canToggleUserVerification = () => isSuperAdmin() || isViewer();
+  /** User row actions (edit, delete, online, verify, etc.) — Super Admin + Admin only */
+  const canManageUserActions = () => isSuperAdmin() || isAdmin();
+=======
+  const canViewUsers = () => isSuperAdmin() || isViewer() || isCrmStreamerStaff() || isAdmin();
+  const canCreateUsers = () => canManageUserActions();
+>>>>>>> 5052daaaf1b9ee42f8d0a55467f54c0e4e9bdc93
+  const canDeleteUsers = () => canManageUserActions();
+  const canEditUsers = () => canManageUserActions();
+  const canToggleUserVerification = () => canManageUserActions();
   const canManageContent = () => isSuperAdmin() || isAdmin();
   const canManageReports = () => isSuperAdmin() || isAdmin();
   const canAccessFullCrm = () => !isCrmStreamerStaff();
@@ -100,12 +110,14 @@ export const AuthProvider = ({ children }) => {
         isAdmin,
         isViewer,
         isCrmStreamerStaff,
+        canManageUserActions,
         canCreateAdminUsers,
         canDeleteAdminUsers,
         canViewUsers,
         canCreateUsers,
         canDeleteUsers,
         canEditUsers,
+        canManageUserActions,
         canToggleUserVerification,
         canManageContent,
         canManageReports,

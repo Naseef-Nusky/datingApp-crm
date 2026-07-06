@@ -51,6 +51,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
     canViewUsers,
     canEditUsers,
     canDeleteUsers,
+    canManageUserActions,
     canCreateUsers,
     canToggleUserVerification,
     isAdmin,
@@ -115,24 +116,10 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
     gender: 'male',
   });
 
-  // If admin role (not superadmin), show access denied message
-  if (isAdmin() && admin?.userType !== 'superadmin') {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <FaLock className="text-6xl text-gray-400 mx-auto mb-4" />
-          <h3 className="text-2xl font-semibold text-gray-800 mb-2">Access Denied</h3>
-          <p className="text-gray-600">
-            Admin role does not have permission to view or manage users.
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Only Super Admin and Viewer roles can access user management.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+<<<<<<< HEAD
+=======
+  // Admin role can view users; actions are gated by canEditUsers / canDeleteUsers (Super Admin + Admin only).
+>>>>>>> 5052daaaf1b9ee42f8d0a55467f54c0e4e9bdc93
   // If user doesn't have view permission
   if (!canViewUsers()) {
     return (
@@ -272,7 +259,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
       alert('User permanently deleted.');
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert(error.response?.data?.message || 'Failed to delete user');
+      alert(error.response?.data?.message || error.response?.data?.error || 'Failed to delete user');
     }
   };
 
@@ -832,7 +819,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                {canEditUsers() && (
+                {canDeleteUsers() && (
                   <th scope="col" className="px-3 py-3 w-10 text-left">
                     <span className="sr-only">Select row</span>
                   </th>
@@ -881,7 +868,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
-                  {canEditUsers() && (
+                  {canDeleteUsers() && (
                     <td className="px-3 py-4 whitespace-nowrap align-middle">
                       <input
                         type="checkbox"
@@ -1043,9 +1030,13 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium">
-                    {canEditUsers() ? (
+<<<<<<< HEAD
+                    {canManageUserActions() ? (
+=======
+                    {canEditUsers() || canDeleteUsers() ? (
+>>>>>>> 5052daaaf1b9ee42f8d0a55467f54c0e4e9bdc93
                       <div className="flex flex-wrap gap-2">
-                        {(user.userType === 'streamer' || user.userType === 'talent') && (
+                        {canEditUsers() && (user.userType === 'streamer' || user.userType === 'talent') && (
                           <button
                             onClick={() => handleOpenEditProfile(user)}
                             className="inline-flex items-center gap-1 px-2 py-1 rounded text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50"
@@ -1066,6 +1057,9 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
                             <span>Remove</span>
                           </button>
                         )}
+                        {canEditUsers() && (
+                          <>
+<<<<<<< HEAD
                         <button
                           onClick={() => handleSetOnline(user.id, !user.profile?.isOnline)}
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.profile?.isOnline ? 'text-green-600 hover:text-green-900 hover:bg-green-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
@@ -1082,6 +1076,26 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
                           {user.isActive ? <FaUserTimes className="flex-shrink-0" /> : <FaUserCheck className="flex-shrink-0" />}
                           <span>{user.isActive ? 'Deactivate' : 'Activate'}</span>
                         </button>
+=======
+                            <button
+                              onClick={() => handleSetOnline(user.id, !user.profile?.isOnline)}
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.profile?.isOnline ? 'text-green-600 hover:text-green-900 hover:bg-green-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+                              title={user.profile?.isOnline ? 'Set offline' : 'Set online'}
+                            >
+                              <FaCircle className="flex-shrink-0 text-xs" />
+                              <span>{user.profile?.isOnline ? 'Offline' : 'Online'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleToggleActive(user.id, user.isActive)}
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.isActive ? 'text-red-600 hover:text-red-900 hover:bg-red-50' : 'text-green-600 hover:text-green-900 hover:bg-green-50'}`}
+                              title={user.isActive ? 'Deactivate' : 'Activate'}
+                            >
+                              {user.isActive ? <FaUserTimes className="flex-shrink-0" /> : <FaUserCheck className="flex-shrink-0" />}
+                              <span>{user.isActive ? 'Deactivate' : 'Activate'}</span>
+                            </button>
+>>>>>>> 5052daaaf1b9ee42f8d0a55467f54c0e4e9bdc93
+                          </>
+                        )}
                         {canToggleUserVerification() && (
                           <button
                             onClick={() => handleToggleVerified(user.id, user.isVerified)}
