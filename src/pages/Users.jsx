@@ -116,10 +116,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
     gender: 'male',
   });
 
-<<<<<<< HEAD
-=======
   // Admin role can view users; actions are gated by canEditUsers / canDeleteUsers (Super Admin + Admin only).
->>>>>>> 5052daaaf1b9ee42f8d0a55467f54c0e4e9bdc93
   // If user doesn't have view permission
   if (!canViewUsers()) {
     return (
@@ -684,7 +681,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
                   if (canCreate) {
                     navigate('/users/create');
                   } else {
-                    alert(`You do not have permission to create users. Current role: ${admin?.userType || 'unknown'}. Only Super Admin and Viewer roles can create users.`);
+                    alert(`You do not have permission to create users. Current role: ${admin?.userType || 'unknown'}. Super Admin, Admin, and Viewer can create users.`);
                   }
                 }}
                 disabled={!canCreateUsers || typeof canCreateUsers !== 'function' || !canCreateUsers()}
@@ -696,8 +693,6 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
                 title={
                   canCreateUsers && typeof canCreateUsers === 'function' && canCreateUsers()
                     ? 'Create new user'
-                    : admin?.userType === 'admin'
-                    ? 'Admin role cannot create users'
                     : `You do not have permission to create users. Current role: ${admin?.userType || 'unknown'}`
                 }
               >
@@ -1030,11 +1025,7 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium">
-<<<<<<< HEAD
                     {canManageUserActions() ? (
-=======
-                    {canEditUsers() || canDeleteUsers() ? (
->>>>>>> 5052daaaf1b9ee42f8d0a55467f54c0e4e9bdc93
                       <div className="flex flex-wrap gap-2">
                         {canEditUsers() && (user.userType === 'streamer' || user.userType === 'talent') && (
                           <button
@@ -1059,24 +1050,6 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
                         )}
                         {canEditUsers() && (
                           <>
-<<<<<<< HEAD
-                        <button
-                          onClick={() => handleSetOnline(user.id, !user.profile?.isOnline)}
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.profile?.isOnline ? 'text-green-600 hover:text-green-900 hover:bg-green-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
-                          title={user.profile?.isOnline ? 'Set offline' : 'Set online'}
-                        >
-                          <FaCircle className="flex-shrink-0 text-xs" />
-                          <span>{user.profile?.isOnline ? 'Offline' : 'Online'}</span>
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(user.id, user.isActive)}
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.isActive ? 'text-red-600 hover:text-red-900 hover:bg-red-50' : 'text-green-600 hover:text-green-900 hover:bg-green-50'}`}
-                          title={user.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {user.isActive ? <FaUserTimes className="flex-shrink-0" /> : <FaUserCheck className="flex-shrink-0" />}
-                          <span>{user.isActive ? 'Deactivate' : 'Activate'}</span>
-                        </button>
-=======
                             <button
                               onClick={() => handleSetOnline(user.id, !user.profile?.isOnline)}
                               className={`inline-flex items-center gap-1 px-2 py-1 rounded ${user.profile?.isOnline ? 'text-green-600 hover:text-green-900 hover:bg-green-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
@@ -1093,7 +1066,6 @@ const Users = ({ defaultTypeFilter, newUsersOnly = false, dummyUsersOnly = false
                               {user.isActive ? <FaUserTimes className="flex-shrink-0" /> : <FaUserCheck className="flex-shrink-0" />}
                               <span>{user.isActive ? 'Deactivate' : 'Activate'}</span>
                             </button>
->>>>>>> 5052daaaf1b9ee42f8d0a55467f54c0e4e9bdc93
                           </>
                         )}
                         {canToggleUserVerification() && (

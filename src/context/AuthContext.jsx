@@ -76,26 +76,23 @@ export const AuthProvider = ({ children }) => {
   const isViewer = () => admin?.userType === 'viewer';
   const isCrmStreamerStaff = () => admin?.userType === 'crm_streamer';
 
-  /** User list actions: Super Admin + Admin only (Viewer is read-only). */
+  /** Edit / delete / online / activate / verify — Super Admin + Admin only. */
   const canManageUserActions = () => isSuperAdmin() || isAdmin();
 
   const canCreateAdminUsers = () => isSuperAdmin();
   const canDeleteAdminUsers = () => isSuperAdmin();
-<<<<<<< HEAD
   const canViewUsers = () => isSuperAdmin() || isAdmin() || isViewer() || isCrmStreamerStaff();
-  const canCreateUsers = () => isSuperAdmin() || isViewer();
-  /** User row actions (edit, delete, online, verify, etc.) — Super Admin + Admin only */
-  const canManageUserActions = () => isSuperAdmin() || isAdmin();
-=======
-  const canViewUsers = () => isSuperAdmin() || isViewer() || isCrmStreamerStaff() || isAdmin();
-  const canCreateUsers = () => canManageUserActions();
->>>>>>> 5052daaaf1b9ee42f8d0a55467f54c0e4e9bdc93
+  /** Create dating profiles — Super Admin, Admin, and Viewer (create + view only). */
+  const canCreateUsers = () => isSuperAdmin() || isAdmin() || isViewer();
   const canDeleteUsers = () => canManageUserActions();
   const canEditUsers = () => canManageUserActions();
   const canToggleUserVerification = () => canManageUserActions();
   const canManageContent = () => isSuperAdmin() || isAdmin();
   const canManageReports = () => isSuperAdmin() || isAdmin();
-  const canAccessFullCrm = () => !isCrmStreamerStaff();
+  /** Full CRM nav (dashboard, payments, gifts, etc.) — Super Admin + Admin only. */
+  const canAccessFullCrm = () => isSuperAdmin() || isAdmin();
+  /** Profile creator (viewer): users list + create only. */
+  const isProfileCreator = () => isViewer();
   /** Sidebar "New users" tab — CRM streamer staff only (not admin/viewer/superadmin). */
   const canViewNewUsersTab = () => isCrmStreamerStaff();
 
@@ -110,6 +107,7 @@ export const AuthProvider = ({ children }) => {
         isAdmin,
         isViewer,
         isCrmStreamerStaff,
+        isProfileCreator,
         canManageUserActions,
         canCreateAdminUsers,
         canDeleteAdminUsers,
@@ -117,7 +115,6 @@ export const AuthProvider = ({ children }) => {
         canCreateUsers,
         canDeleteUsers,
         canEditUsers,
-        canManageUserActions,
         canToggleUserVerification,
         canManageContent,
         canManageReports,

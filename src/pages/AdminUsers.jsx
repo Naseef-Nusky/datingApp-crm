@@ -175,7 +175,7 @@ const AdminUsers = () => {
     const labels = {
       superadmin: 'Super Admin',
       admin: 'Admin',
-      viewer: 'Viewer',
+      viewer: 'Profile Creator — create & view only',
       crm_streamer: 'Streamer (CRM)',
       moderator: 'Moderator',
     };
@@ -455,11 +455,11 @@ const AdminUsers = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-nex-orange"
                 >
                   <option value="admin">Admin (Full Access)</option>
-                  <option value="viewer">Viewer (Read Only)</option>
+                  <option value="viewer">Profile Creator — create & view only</option>
                   <option value="crm_streamer">Streamer (CRM login)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Streamer (CRM): new users, create members, notifications. Super Admin cannot be created here.
+                  Profile Creator: can create and view dating profiles only (no other CRM tabs). Streamer (CRM): new users list. Super Admin cannot be created here.
                 </p>
               </div>
               <div className="flex gap-2 pt-4">
@@ -561,13 +561,13 @@ const AdminUsers = () => {
                   }`}
                 >
                   <option value="admin">Admin (Full Access)</option>
-                  <option value="viewer">Viewer (Read Only)</option>
+                  <option value="viewer">Profile Creator — create & view only</option>
                   <option value="crm_streamer">Streamer (CRM login)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   {selectedAdmin?.userType === 'superadmin'
                     ? 'Super Admin role cannot be changed. Only username, password, and name can be updated.'
-                    : 'Streamer (CRM): new users list only. Super Admin cannot be assigned here.'}
+                    : 'Profile Creator: users + create only (no other CRM tabs). Streamer (CRM): new users list.'}
                 </p>
               </div>
               <div className="flex gap-2 pt-4">

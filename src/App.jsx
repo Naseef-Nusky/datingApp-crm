@@ -33,6 +33,21 @@ const ProtectedRoute = ({ children }) => {
   return admin ? children : <Navigate to="/login" />;
 };
 
+const CreateUserRoute = () => {
+  const { canCreateUsers, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-admin-light">
+        <div className="text-xl text-admin-primary">Loading...</div>
+      </div>
+    );
+  }
+  if (!canCreateUsers?.()) {
+    return <Navigate to="/users" replace />;
+  }
+  return <RegistrationWizard crmCreateUser onSuccessRedirectTo="/users" />;
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -51,7 +66,7 @@ function App() {
                     <Route path="/users" element={<Users defaultTypeFilter="real" />} />
                     <Route path="/streamers" element={<Users defaultTypeFilter="streamers" />} />
                     <Route path="/users/dummy" element={<Users defaultTypeFilter="real" dummyUsersOnly />} />
-                    <Route path="/users/create" element={<RegistrationWizard crmCreateUser onSuccessRedirectTo="/users" />} />
+                    <Route path="/users/create" element={<CreateUserRoute />} />
                     <Route path="/admin-users" element={<AdminUsers />} />
                     <Route path="/wishlist-categories" element={<WishlistCategories />} />
                     <Route path="/wishlist-products" element={<WishlistProducts />} />

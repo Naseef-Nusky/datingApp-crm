@@ -37,9 +37,10 @@ const AdminLayout = ({ children }) => {
   const [presentsOpen, setPresentsOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
-  const { admin, logout, canViewUsers, canAccessFullCrm, canViewNewUsersTab, isCrmStreamerStaff } =
+  const { admin, logout, canViewUsers, canCreateUsers, canAccessFullCrm, canViewNewUsersTab, isCrmStreamerStaff, isProfileCreator } =
     useAuth();
-  const fullCrm = canAccessFullCrm?.() !== false;
+  const fullCrm = canAccessFullCrm?.() === true;
+  const profileCreatorCrm = isProfileCreator?.() === true;
   const streamerCrm = canViewNewUsersTab?.() === true || isCrmStreamerStaff?.() === true;
 
   useEffect(() => {
@@ -67,7 +68,7 @@ const AdminLayout = ({ children }) => {
 
   const isUsersActive = streamerCrm
     ? false
-    : fullCrm &&
+    : (fullCrm || profileCreatorCrm) &&
       (location.pathname === '/users' ||
         location.pathname === '/streamers' ||
         location.pathname === '/users/dummy' ||
@@ -83,14 +84,17 @@ const AdminLayout = ({ children }) => {
 
   const topMenuItems = [{ path: '/', icon: FaHome, label: 'Dashboard', permission: () => true }];
 
-  const usersItems = fullCrm
-    ? [
-        { path: '/users', icon: FaUsers, label: 'Real users' },
-        { path: '/streamers', icon: FaVideo, label: 'Streamers' },
-        { path: '/users/dummy', icon: FaUserSecret, label: 'Dummy users' },
-        { path: '/users/create', icon: FaPlus, label: 'Create user' },
-      ]
-    : [];
+  const usersItems =
+    fullCrm || profileCreatorCrm
+      ? [
+          { path: '/users', icon: FaUsers, label: 'Real users' },
+          { path: '/streamers', icon: FaVideo, label: 'Streamers' },
+          { path: '/users/dummy', icon: FaUserSecret, label: 'Dummy users' },
+          ...(canCreateUsers?.()
+            ? [{ path: '/users/create', icon: FaPlus, label: 'Create user' }]
+            : []),
+        ]
+      : [];
 
   const wishlistItems = [
     { path: '/wishlist-categories', icon: FaTags, label: 'Categories' },
@@ -216,7 +220,7 @@ const AdminLayout = ({ children }) => {
               </li>
             )}
 
-            {fullCrm && canViewUsers && canViewUsers() && usersItems.length > 0 && (
+            {(fullCrm || profileCreatorCrm) && canViewUsers && canViewUsers() && usersItems.length > 0 && (
               <li>
                 {showNavLabels ? (
                   <>
@@ -540,7 +544,7 @@ const AdminLayout = ({ children }) => {
               </h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-              <CrmNotifications />
+              {fullCrm && <CrmNotifications />}
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-nex rounded-full flex items-center justify-center shrink-0">
                   <span className="text-white font-semibold text-sm">
@@ -555,7 +559,7 @@ const AdminLayout = ({ children }) => {
                       : admin?.userType === 'admin'
                         ? 'Administrator'
                         : admin?.userType === 'viewer'
-                          ? 'Viewer'
+                          ? 'Profile Creator'
                           : admin?.userType === 'crm_streamer'
                             ? 'Streamer (CRM)'
                             : 'Administrator'}
