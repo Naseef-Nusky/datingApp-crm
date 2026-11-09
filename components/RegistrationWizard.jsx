@@ -58,6 +58,9 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
   const returnToCrm = searchParams.get('returnTo');
   const auth = useAuth();
   const register = auth?.register;
+  /** Profile Creator (viewer): create profiles without photo upload UI. */
+  const hidePhotoStep = Boolean(crmCreateUser && auth?.isProfileCreator?.());
+  const lastStep = hidePhotoStep ? 4 : 5;
   const [currentStep, setCurrentStep] = useState(completeProfileOnly || crmCreateUser ? 1 : 0);
   const [loading, setLoading] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
@@ -212,8 +215,11 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     }));
   };
 
-  const photosRequiredForRole = () =>
-    !(crmCreateUser && formData.userRole === 'admin');
+  const photosRequiredForRole = () => {
+    // CRM create (including Profile Creator): photos optional — accounts can be created without a picture
+    if (crmCreateUser) return false;
+    return true;
+  };
 
   const registrationPhotosComplete = () => {
     if (!photosRequiredForRole()) return true;
@@ -460,7 +466,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
     setEmailError('');
     const isValid = await validateStep(currentStep);
     if (isValid) {
-      if (currentStep < 5) {
+      if (currentStep < lastStep) {
         setCurrentStep(currentStep + 1);
       } else {
         handleSubmit();
@@ -469,7 +475,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
   };
 
   const handleSkip = () => {
-    if (currentStep < 5) {
+    if (currentStep < lastStep) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -501,11 +507,6 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         const password = (formData.password && formData.password.trim()) ? formData.password.trim() : null;
         const role = formData.userRole || 'user';
 
-        if (role !== 'admin' && !registrationPhotosComplete()) {
-          setError('Please add your profile photo and 2 gallery photos before registering.');
-          return;
-        }
-
         const emailTakenMsg = await checkCrmEmailTaken(email, role);
         if (emailTakenMsg) {
           setEmailError(emailTakenMsg);
@@ -527,22 +528,27 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         };
         if (password) payload.password = password;
 
+        const profilePhoto = formData.photos?.[0] || null;
         let response;
         if (role === 'streamer') {
-          const fd = new FormData();
-          fd.append('email', payload.email);
-          fd.append('firstName', payload.firstName);
-          fd.append('lastName', payload.lastName);
-          fd.append('age', String(payload.age));
-          fd.append('gender', payload.gender);
-          fd.append('seeking', payload.seeking);
-          fd.append('hometown', payload.hometown);
-          fd.append('bio', payload.bio);
-          fd.append('idealPartner', payload.idealPartner);
-          fd.append('interests', JSON.stringify(payload.interests));
-          if (password) fd.append('password', password);
-          fd.append('photo', formData.photos[0]);
-          response = await axios.post('/api/admin/streamers/with-photo', fd);
+          if (profilePhoto) {
+            const fd = new FormData();
+            fd.append('email', payload.email);
+            fd.append('firstName', payload.firstName);
+            fd.append('lastName', payload.lastName);
+            fd.append('age', String(payload.age));
+            fd.append('gender', payload.gender);
+            fd.append('seeking', payload.seeking);
+            fd.append('hometown', payload.hometown);
+            fd.append('bio', payload.bio);
+            fd.append('idealPartner', payload.idealPartner);
+            fd.append('interests', JSON.stringify(payload.interests));
+            if (password) fd.append('password', password);
+            fd.append('photo', profilePhoto);
+            response = await axios.post('/api/admin/streamers/with-photo', fd);
+          } else {
+            response = await axios.post('/api/admin/streamers', payload);
+          }
           const streamerId = response.data?.user?.id;
           if (streamerId) {
             await uploadCrmUserGalleryPhotos(streamerId, formData.photos);
@@ -556,7 +562,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           };
           if (password) adminPayload.password = password;
           response = await axios.post('/api/admin/admins', adminPayload);
-        } else {
+        } else if (profilePhoto) {
           const fd = new FormData();
           fd.append('email', payload.email);
           fd.append('firstName', payload.firstName);
@@ -569,8 +575,14 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           fd.append('idealPartner', payload.idealPartner);
           fd.append('interests', JSON.stringify(payload.interests));
           if (password) fd.append('password', password);
-          fd.append('photo', formData.photos[0]);
+          fd.append('photo', profilePhoto);
           response = await axios.post('/api/admin/users/with-photo', fd);
+          const memberId = response.data?.user?.id;
+          if (memberId) {
+            await uploadCrmUserGalleryPhotos(memberId, formData.photos);
+          }
+        } else {
+          response = await axios.post('/api/admin/users', payload);
           const memberId = response.data?.user?.id;
           if (memberId) {
             await uploadCrmUserGalleryPhotos(memberId, formData.photos);
@@ -929,14 +941,22 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
         );
 
       case 5: {
-        if (crmCreateUser && formData.userRole === 'admin') {
+        if (crmCreateUser && (formData.userRole === 'admin' || hidePhotoStep)) {
           return (
             <div className="space-y-6 text-center">
-              <h2 className="text-3xl font-bold mb-2">Admin account</h2>
-              <p className="text-sm text-gray-600">No photos required for CRM admin accounts.</p>
+              <h2 className="text-3xl font-bold mb-2">
+                {formData.userRole === 'admin' ? 'Admin account' : 'Ready to create'}
+              </h2>
+              <p className="text-sm text-gray-600">
+                {formData.userRole === 'admin'
+                  ? 'No photos required for CRM admin accounts.'
+                  : 'No profile photo needed — you can create this account without uploading an image.'}
+              </p>
             </div>
           );
         }
+
+        const photosOptional = crmCreateUser;
 
         const renderPhotoSlot = (slotIndex, label, previewUrl, isExisting = false) => {
           const photo = formData.photos?.[slotIndex];
@@ -1010,7 +1030,9 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
           <div className="space-y-6">
             <h2 className="text-3xl font-bold text-center mb-2">Add your photos</h2>
             <p className="text-center text-sm text-gray-900 mb-6">
-              1 profile photo{existingPhotos.profile ? ' (already on profile)' : ''} and 2 gallery photos required.
+              {photosOptional
+                ? 'Photos are optional — you can create the profile without a picture.'
+                : `1 profile photo${existingPhotos.profile ? ' (already on profile)' : ''} and 2 gallery photos required.`}
             </p>
             {photoCropSource ? (
               <ImageCropEditor
@@ -1109,7 +1131,7 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                 </button>
               )}
 
-              {currentStep > 0 && currentStep < 5 && !completeProfileOnly && !crmCreateUser && (
+              {currentStep > 0 && currentStep < lastStep && !completeProfileOnly && !crmCreateUser && (
                 <button
                   type="button"
                   onClick={handleSkip}
@@ -1125,21 +1147,24 @@ const RegistrationWizard = ({ completeProfileOnly = false, initialProfile = null
                 type="button"
                 onClick={handleNext}
                 className={`min-h-[48px] min-w-[120px] px-6 py-3 sm:px-12 rounded-lg font-semibold text-white transition bg-gradient-nex hover:opacity-90 active:opacity-95 shadow-md cursor-pointer touch-manipulation select-none ${
-                  loading || checkingEmail || (currentStep === 5 && !registrationPhotosComplete())
+                  loading || checkingEmail || (currentStep === 5 && !crmCreateUser && !registrationPhotosComplete())
                     ? 'opacity-50 cursor-not-allowed pointer-events-none'
                     : ''
                 }`}
-                disabled={loading || checkingEmail || (currentStep === 5 && !registrationPhotosComplete())}
+                disabled={loading || checkingEmail || (currentStep === 5 && !crmCreateUser && !registrationPhotosComplete())}
               >
                 {loading
                   ? (completeProfileOnly ? 'Saving...' : 'Registering...')
                   : checkingEmail
                     ? 'Checking...'
-                    : (currentStep === 5 ? 'REGISTER' : 'NEXT')}
+                    : (currentStep === lastStep ? 'REGISTER' : 'NEXT')}
               </button>
 
               <div className="flex space-x-2 mt-4">
-                {(completeProfileOnly || crmCreateUser ? [1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5]).map((step) => (
+                {(completeProfileOnly || crmCreateUser
+                  ? (hidePhotoStep ? [1, 2, 3, 4] : [1, 2, 3, 4, 5])
+                  : [0, 1, 2, 3, 4, 5]
+                ).map((step) => (
                   <div
                     key={step}
                     className={`w-2 h-2 rounded-full ${
